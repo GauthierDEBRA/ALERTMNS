@@ -1,0 +1,20 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Frontend Vue",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "/Users/goatze/Desktop/ALERTMNS/frontend",
+      "port": 5173
+    },
+    {
+      "name": "Backend Spring Boot",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "export JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home && export PATH=$JAVA_HOME/bin:$PATH && mvn spring-boot:run -Dspring-boot.run.profiles=dev"],
+      "cwd": "/Users/goatze/Desktop/ALERTMNS/backend",
+      "port": 8080,
+      "autoPort": false
+    }
+  ]
+}
