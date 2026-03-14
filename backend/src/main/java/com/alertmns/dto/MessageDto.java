@@ -14,6 +14,7 @@ import java.util.List;
 @AllArgsConstructor
 public class MessageDto {
 
+    private Long id;
     private Long idMessage;
     private String contenu;
     private LocalDateTime dateEnvoi;

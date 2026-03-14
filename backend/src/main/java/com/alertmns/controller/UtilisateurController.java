@@ -152,12 +152,7 @@ public class UtilisateurController {
                 return ResponseEntity.badRequest().body(Map.of("message", "Image requise"));
             }
 
-            String contentType = file.getContentType();
-            if (contentType == null || !contentType.startsWith("image/")) {
-                return ResponseEntity.badRequest().body(Map.of("message", "Le fichier doit être une image"));
-            }
-
-            uploadedUrl = fileService.uploadFile(file);
+            uploadedUrl = fileService.uploadAvatar(file);
             UserDto requester = utilisateurService.getUserByEmail(authentication.getName());
             boolean isAdmin = "Admin".equals(requester.getRole());
             return ResponseEntity.ok(utilisateurService.updateAvatar(id, uploadedUrl, requester.getIdUser(), isAdmin));

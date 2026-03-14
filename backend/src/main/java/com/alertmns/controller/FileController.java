@@ -5,9 +5,12 @@ import com.alertmns.entity.PieceJointe;
 import com.alertmns.repository.MessageRepository;
 import com.alertmns.repository.PieceJointeRepository;
 import com.alertmns.service.FileService;
+import com.alertmns.service.MessageService;
+import com.alertmns.service.UtilisateurService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,18 +24,23 @@ public class FileController {
     private final FileService fileService;
     private final MessageRepository messageRepository;
     private final PieceJointeRepository pieceJointeRepository;
+    private final MessageService messageService;
+    private final UtilisateurService utilisateurService;
 
     @PostMapping("/upload")
     public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file,
-                                         @RequestParam(value = "messageId", required = false) Long messageId) {
+                                        @RequestParam(value = "messageId", required = false) Long messageId,
+                                        Authentication authentication) {
         try {
-            String url = fileService.uploadFile(file);
+            String url = fileService.uploadAttachment(file);
             String originalFilename = file.getOriginalFilename();
 
             // If messageId provided, attach file to message
             if (messageId != null) {
+                Long requesterId = utilisateurService.getUserByEmail(authentication.getName()).getIdUser();
                 Message message = messageRepository.findById(messageId)
                         .orElseThrow(() -> new RuntimeException("Message non trouvé: " + messageId));
+                messageService.assertUserCanAccessCanal(message.getCanal().getIdCanal(), requesterId);
 
                 PieceJointe pj = PieceJointe.builder()
                         .nomFichier(originalFilename)

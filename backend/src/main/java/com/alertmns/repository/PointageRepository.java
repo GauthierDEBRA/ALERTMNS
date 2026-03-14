@@ -19,7 +19,14 @@ public interface PointageRepository extends JpaRepository<Pointage, Long> {
     @Query("SELECT p FROM Pointage p WHERE p.utilisateur.idUser = :userId AND p.dateFin IS NULL")
     Optional<Pointage> findOpenPointage(@Param("userId") Long userId);
 
-    @Query("SELECT p FROM Pointage p WHERE p.utilisateur.idUser = :userId AND p.dateDebut >= :start AND p.dateDebut <= :end ORDER BY p.dateDebut ASC")
+    @Query("""
+            SELECT p
+            FROM Pointage p
+            WHERE p.utilisateur.idUser = :userId
+              AND p.dateDebut <= :end
+              AND (p.dateFin IS NULL OR p.dateFin >= :start)
+            ORDER BY p.dateDebut ASC
+            """)
     List<Pointage> findByUserAndDateRange(@Param("userId") Long userId,
                                           @Param("start") LocalDateTime start,
                                           @Param("end") LocalDateTime end);
@@ -27,11 +34,15 @@ public interface PointageRepository extends JpaRepository<Pointage, Long> {
     @Query("SELECT DISTINCT p.utilisateur.idUser FROM Pointage p WHERE p.dateFin IS NULL")
     List<Long> findPresentUserIds();
 
-    @Query("SELECT p FROM Pointage p JOIN FETCH p.utilisateur u " +
-            "WHERE (:userId IS NULL OR u.idUser = :userId) " +
-            "AND (:start IS NULL OR p.dateDebut >= :start) " +
-            "AND (:end IS NULL OR p.dateDebut <= :end) " +
-            "ORDER BY p.dateDebut DESC")
+    @Query("""
+            SELECT p
+            FROM Pointage p
+            JOIN FETCH p.utilisateur u
+            WHERE (:userId IS NULL OR u.idUser = :userId)
+              AND (:start IS NULL OR p.dateFin IS NULL OR p.dateFin >= :start)
+              AND (:end IS NULL OR p.dateDebut <= :end)
+            ORDER BY p.dateDebut DESC
+            """)
     List<Pointage> findForAdminExport(@Param("userId") Long userId,
                                       @Param("start") LocalDateTime start,
                                       @Param("end") LocalDateTime end);

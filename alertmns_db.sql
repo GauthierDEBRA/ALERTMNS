@@ -206,6 +206,25 @@ CREATE TABLE t_audit_log (
 
 
 -- ============================================================
+--  11c. t_refresh_token
+-- ============================================================
+CREATE TABLE t_refresh_token (
+  id_refresh_token BIGINT       NOT NULL AUTO_INCREMENT,
+  token_hash       VARCHAR(64)  NOT NULL,
+  expires_at       DATETIME     NOT NULL,
+  created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_used_at     DATETIME     NULL,
+  is_revoked       TINYINT(1)   NOT NULL DEFAULT 0,
+  id_user          BIGINT       NOT NULL,
+  PRIMARY KEY (id_refresh_token),
+  UNIQUE KEY uk_refresh_token_hash (token_hash),
+  CONSTRAINT fk_refresh_token_user
+    FOREIGN KEY (id_user) REFERENCES t_utilisateur(id_user)
+    ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB COMMENT='Refresh tokens persistés pour les sessions longues';
+
+
+-- ============================================================
 --  12. t_participant_reunion  (association participe)
 -- ============================================================
 CREATE TABLE t_participant_reunion (
@@ -231,6 +250,9 @@ CREATE TABLE t_notification (
   contenu   TEXT          NOT NULL,
   is_lu     TINYINT(1)    NOT NULL DEFAULT 0 COMMENT '0 = non lu, 1 = lu',
   date_creation DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  target_type VARCHAR(100) NULL,
+  target_id BIGINT NULL,
+  target_route VARCHAR(255) NULL,
   id_user   BIGINT        NOT NULL,
   PRIMARY KEY (id_notif),
   CONSTRAINT fk_notif_user
@@ -252,6 +274,7 @@ CREATE INDEX idx_pointage_user_date ON t_pointage(id_user, date_debut);
 CREATE INDEX idx_pointage_user_fin ON t_pointage(id_user, date_fin);
 CREATE INDEX idx_notif_user_notif ON t_notification(id_user, id_notif);
 CREATE INDEX idx_notif_user_lu_notif ON t_notification(id_user, is_lu, id_notif);
+CREATE INDEX idx_refresh_token_user ON t_refresh_token(id_user, expires_at);
 CREATE INDEX idx_reunion_createur ON t_reunion(id_createur);
 CREATE INDEX idx_reunion_date     ON t_reunion(date_prevue);
 CREATE INDEX idx_pr_user_reunion  ON t_participant_reunion(id_user, id_reunion);

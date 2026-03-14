@@ -35,6 +35,15 @@ public class Notification {
     @Builder.Default
     private LocalDateTime dateCreation = LocalDateTime.now();
 
+    @Column(name = "target_type", length = 100)
+    private String targetType;
+
+    @Column(name = "target_id")
+    private Long targetId;
+
+    @Column(name = "target_route", length = 255)
+    private String targetRoute;
+
     @JsonIgnoreProperties({"mdp", "structure", "hibernateLazyInitializer", "handler"})
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_user")

@@ -165,7 +165,8 @@ export const useMessagesStore = defineStore('messages', {
         return {
           success: true,
           results: (response.data || []).map(result => ({
-            idMessage: result.idMessage,
+            id: result.id ?? result.idMessage,
+            idMessage: result.idMessage ?? result.id,
             canalId: result.canalId,
             conversationName: result.conversationName,
             typeCanal: result.typeCanal,

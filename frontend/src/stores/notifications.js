@@ -9,7 +9,10 @@ function normalizeNotification(notif = {}) {
     message: notif.message ?? notif.contenu ?? '',
     contenu: notif.contenu ?? notif.message ?? '',
     type: notif.type ?? 'INFO',
-    createdAt: notif.createdAt ?? notif.dateCreation ?? null
+    createdAt: notif.createdAt ?? notif.dateCreation ?? null,
+    targetType: notif.targetType ?? null,
+    targetId: notif.targetId ?? null,
+    targetRoute: notif.targetRoute ?? null
   }
 }
 

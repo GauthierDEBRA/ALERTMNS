@@ -1,11 +1,16 @@
 import { ref, onUnmounted } from 'vue'
 import { Client } from '@stomp/stompjs'
-import SockJS from 'sockjs-client'
 
 let stompClient = null
 let connectionPromise = null
 const subscriptions = new Map()
 const connectionState = ref('disconnected') // 'disconnected' | 'connecting' | 'connected'
+
+function buildWebSocketUrl(token) {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const baseUrl = `${protocol}//${window.location.host}/ws`
+  return token ? `${baseUrl}?token=${encodeURIComponent(token)}` : baseUrl
+}
 
 function getOrCreateClient(token) {
   if (stompClient && stompClient.connected) {
@@ -20,7 +25,7 @@ function getOrCreateClient(token) {
     connectionState.value = 'connecting'
 
     const client = new Client({
-      webSocketFactory: () => new SockJS('/ws'),
+      webSocketFactory: () => new WebSocket(buildWebSocketUrl(token)),
       connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
       debug: () => {},
       reconnectDelay: 5000,
@@ -40,6 +45,19 @@ function getOrCreateClient(token) {
         connectionState.value = 'disconnected'
         connectionPromise = null
         reject(new Error('STOMP error'))
+      },
+      onWebSocketError: (event) => {
+        console.error('WebSocket transport error:', event)
+        connectionState.value = 'disconnected'
+        connectionPromise = null
+        reject(new Error('WebSocket transport error'))
+      },
+      onWebSocketClose: (event) => {
+        connectionState.value = 'disconnected'
+        connectionPromise = null
+        if (!client.connected) {
+          reject(new Error(`WebSocket closed before STOMP connect (${event.code})`))
+        }
       }
     })
 
@@ -121,11 +139,11 @@ export function useWebSocket() {
       ...(pieceJointeUrl && { pieceJointeUrl }),
       ...(pieceJointeNom && { pieceJointeNom })
     }
-    await publish('/app/chat.sendMessage', payload)
+    await publish(`/app/chat.sendMessage/${canalId}`, payload)
   }
 
-  async function subscribeToNotifications(userId, callback) {
-    const destination = `/queue/notifications/${userId}`
+  async function subscribeToNotifications(_userId, callback) {
+    const destination = '/user/queue/notifications'
     if (subscriptions.has(destination)) {
       subscriptions.get(destination).callbacks.add(callback)
       return

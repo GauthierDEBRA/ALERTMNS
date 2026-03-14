@@ -123,7 +123,10 @@ public class ReunionService {
             notificationService.createNotification(
                     participantId,
                     "REUNION",
-                    "Vous avez été invité à la réunion: " + reunion.getTitre()
+                    "Vous avez été invité à la réunion: " + reunion.getTitre(),
+                    "reunion",
+                    reunion.getIdReunion(),
+                    buildReunionTargetRoute(reunion.getIdReunion())
             );
         }
 
@@ -202,7 +205,10 @@ public class ReunionService {
         notificationService.createNotification(
                 userId,
                 "REUNION",
-                "Vous avez été invité à la réunion: " + reunion.getTitre()
+                "Vous avez été invité à la réunion: " + reunion.getTitre(),
+                "reunion",
+                reunion.getIdReunion(),
+                buildReunionTargetRoute(reunion.getIdReunion())
         );
 
         return participant;
@@ -228,7 +234,10 @@ public class ReunionService {
             notificationService.createNotification(
                     organisateur.getIdUser(),
                     "REUNION",
-                    repondant.getPrenom() + " " + repondant.getNom() + " a " + action + " la réunion: " + participant.getReunion().getTitre()
+                    repondant.getPrenom() + " " + repondant.getNom() + " a " + action + " la réunion: " + participant.getReunion().getTitre(),
+                    "reunion",
+                    participant.getReunion().getIdReunion(),
+                    buildReunionTargetRoute(participant.getReunion().getIdReunion())
             );
         }
 
@@ -266,7 +275,10 @@ public class ReunionService {
         notificationService.createNotification(
                 targetUserId,
                 "REUNION",
-                "Vous avez été retiré(e) de la réunion: " + reunion.getTitre()
+                "Vous avez été retiré(e) de la réunion: " + reunion.getTitre(),
+                "reunion",
+                reunion.getIdReunion(),
+                buildReunionTargetRoute(reunion.getIdReunion())
         );
     }
 
@@ -450,7 +462,10 @@ public class ReunionService {
                 .forEach(participant -> notificationService.createNotification(
                         participant.getUtilisateur().getIdUser(),
                         "REUNION",
-                        content
+                        content,
+                        "reunion",
+                        reunion.getIdReunion(),
+                        buildReunionTargetRoute(reunion.getIdReunion())
                 ));
     }
 
@@ -506,7 +521,14 @@ public class ReunionService {
                 .filter(participant -> !"refuse".equals(normalizeStatus(participant.getStatut())))
                 .map(participant -> participant.getUtilisateur().getIdUser())
                 .distinct()
-                .forEach(userId -> notificationService.createNotification(userId, "REUNION", content));
+                .forEach(userId -> notificationService.createNotification(
+                        userId,
+                        "REUNION",
+                        content,
+                        "reunion",
+                        reunion.getIdReunion(),
+                        buildReunionTargetRoute(reunion.getIdReunion())
+                ));
     }
 
     private void refreshAutomaticReminderFlags(Reunion reunion, LocalDateTime previousDatePrevue) {
@@ -528,6 +550,10 @@ public class ReunionService {
 
     private boolean shouldResetReminderFlag(LocalDateTime meetingDate, long targetMinutes, LocalDateTime now) {
         return meetingDate != null && meetingDate.minusMinutes(targetMinutes).isAfter(now);
+    }
+
+    private String buildReunionTargetRoute(Long reunionId) {
+        return reunionId == null ? "/reunions" : "/reunions?focus=" + reunionId;
     }
 
     private String formatMeetingDate(Reunion reunion) {

@@ -42,11 +42,25 @@ public class AuditLogService {
     }
 
     @Transactional(readOnly = true)
-    public List<AuditLogDto> getAuditLogs(Long actorId, String action, LocalDate startDate, LocalDate endDate) {
+    public List<AuditLogDto> getAuditLogs(Long actorId,
+                                          String action,
+                                          String targetType,
+                                          String query,
+                                          LocalDate startDate,
+                                          LocalDate endDate) {
         LocalDateTime start = startDate != null ? startDate.atStartOfDay() : null;
         LocalDateTime end = endDate != null ? endDate.atTime(LocalTime.MAX) : null;
+        String normalizedQuery = normalizeBlank(query);
 
-        return auditLogRepository.findForAudit(actorId, normalizeBlank(action), start, end)
+        return auditLogRepository.findForAudit(
+                        actorId,
+                        normalizeBlank(action),
+                        normalizeBlank(targetType),
+                        start,
+                        end,
+                        normalizedQuery != null ? normalizedQuery.toLowerCase() : null,
+                        normalizedQuery != null && normalizedQuery.chars().anyMatch(Character::isDigit)
+                )
                 .stream()
                 .map(this::toDto)
                 .toList();

@@ -58,12 +58,18 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    logout() {
-      this.user = null
-      this.token = null
-      this.isAuthenticated = false
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
+    async logout() {
+      try {
+        await api.post('/auth/logout', {})
+      } catch {
+        // Even if the backend session is already gone, we still clear the local session.
+      } finally {
+        this.user = null
+        this.token = null
+        this.isAuthenticated = false
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+      }
     },
 
     loadFromStorage() {

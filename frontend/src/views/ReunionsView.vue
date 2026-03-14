@@ -143,6 +143,7 @@
               :key="reunion.id"
               class="reunion-card"
               :class="getReunionClass(reunion)"
+              :data-reunion-id="reunion.id"
             >
               <div class="reunion-card-header">
                 <div class="reunion-status-badge" :class="getStatusClass(reunion)">
@@ -472,7 +473,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 import NotificationPanel from '../components/NotificationPanel.vue'
 import { useAuthStore } from '../stores/auth.js'
 import { useDate } from '../composables/useDate.js'
@@ -480,6 +482,7 @@ import api from '../api/axios.js'
 
 const authStore = useAuthStore()
 const { formatDateFull, formatDateShort } = useDate()
+const route = useRoute()
 
 const reunions = ref([])
 const activeUsers = ref([])
@@ -507,6 +510,7 @@ const participantSearch = ref('')
 const selectedInvitees = ref([])
 const activeFilter = ref('all')
 const openMenuId = ref(null)
+const highlightedReunionId = ref(null)
 
 function toggleMenu(id) {
   openMenuId.value = openMenuId.value === id ? null : id
@@ -649,7 +653,8 @@ function getReunionClass(reunion) {
     'reunion-organizer': status === 'organisateur',
     'reunion-accepted': status === 'accepte',
     'reunion-refused': status === 'refuse',
-    'reunion-pending': status === 'en_attente'
+    'reunion-pending': status === 'en_attente',
+    'reunion-highlighted': highlightedReunionId.value === reunion.id
   }
 }
 
@@ -766,6 +771,20 @@ async function fetchReunions() {
     responseError.value = e.response?.data?.message || 'Impossible de charger les réunions.'
   } finally {
     loading.value = false
+  }
+}
+
+function syncHighlightedReunionFromRoute() {
+  const focusId = Number(route.query.focus)
+  highlightedReunionId.value = Number.isInteger(focusId) && focusId > 0 ? focusId : null
+}
+
+async function scrollToHighlightedReunion() {
+  if (!highlightedReunionId.value) return
+  await nextTick()
+  const target = document.querySelector(`[data-reunion-id="${highlightedReunionId.value}"]`)
+  if (target) {
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 }
 
@@ -1049,14 +1068,33 @@ function handleDocumentClick(e) {
 }
 
 onMounted(async () => {
+  syncHighlightedReunionFromRoute()
   await fetchReunions()
   await fetchActiveUsers()
+  await scrollToHighlightedReunion()
   document.addEventListener('click', handleDocumentClick)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleDocumentClick)
 })
+
+watch(
+  () => route.query.focus,
+  async () => {
+    syncHighlightedReunionFromRoute()
+    await scrollToHighlightedReunion()
+  }
+)
+
+watch(
+  () => filteredReunions.value.map(reunion => reunion.id).join(','),
+  async () => {
+    if (highlightedReunionId.value) {
+      await scrollToHighlightedReunion()
+    }
+  }
+)
 </script>
 
 <style scoped>
@@ -1296,6 +1334,11 @@ onUnmounted(() => {
 .reunion-card:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
+}
+
+.reunion-highlighted {
+  box-shadow: 0 0 0 3px rgba(244, 85, 19, 0.2), var(--shadow-md);
+  border-color: rgba(244, 85, 19, 0.35);
 }
 
 .reunion-organizer {

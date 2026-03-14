@@ -104,11 +104,12 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { onMounted, ref } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const email = ref('')
@@ -116,6 +117,16 @@ const password = ref('')
 const loading = ref(false)
 const error = ref('')
 const showPassword = ref(false)
+
+onMounted(() => {
+  const authMessage = sessionStorage.getItem('authMessage')
+  if (authMessage) {
+    error.value = authMessage
+    sessionStorage.removeItem('authMessage')
+  } else if (route.query.reason === 'session-expired') {
+    error.value = 'Votre session a expiré. Merci de vous reconnecter.'
+  }
+})
 
 async function handleLogin() {
   if (!email.value || !password.value) return

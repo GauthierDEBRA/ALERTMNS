@@ -224,6 +224,7 @@ public class CanalController {
 
     private CanalDto toDto(Canal canal, Long requesterId) {
         CanalDto.CanalDtoBuilder builder = CanalDto.builder()
+                .id(canal.getIdCanal())
                 .idCanal(canal.getIdCanal())
                 .nom(canal.getNom())
                 .estPrive(canal.getEstPrive())

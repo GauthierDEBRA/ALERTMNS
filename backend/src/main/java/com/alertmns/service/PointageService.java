@@ -5,6 +5,16 @@ import com.alertmns.dto.PointageExportRowDto;
 import com.alertmns.dto.UserDto;
 import com.alertmns.entity.Pointage;
 import com.alertmns.entity.Utilisateur;
+import com.lowagie.text.Document;
+import com.lowagie.text.DocumentException;
+import com.lowagie.text.Element;
+import com.lowagie.text.FontFactory;
+import com.lowagie.text.PageSize;
+import com.lowagie.text.Paragraph;
+import com.lowagie.text.Phrase;
+import com.lowagie.text.pdf.PdfPCell;
+import com.lowagie.text.pdf.PdfPTable;
+import com.lowagie.text.pdf.PdfWriter;
 import com.alertmns.repository.PointageRepository;
 import com.alertmns.repository.UtilisateurRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +36,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 
@@ -223,6 +234,72 @@ public class PointageService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public byte[] exportPointagesPdf(Long userId, LocalDate startDate, LocalDate endDate) {
+        List<PointageExportRowDto> rows = getPointagesForAdmin(userId, startDate, endDate);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            Document document = new Document(PageSize.A4.rotate(), 24, 24, 24, 24);
+            PdfWriter.getInstance(document, outputStream);
+            document.open();
+
+            Paragraph title = new Paragraph("Export des pointages",
+                    FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16));
+            title.setAlignment(Element.ALIGN_CENTER);
+            title.setSpacingAfter(8f);
+            document.add(title);
+
+            String dateRange = "Periode : "
+                    + (startDate != null ? startDate : "debut")
+                    + " -> "
+                    + (endDate != null ? endDate : "fin");
+            Paragraph subtitle = new Paragraph(dateRange,
+                    FontFactory.getFont(FontFactory.HELVETICA, 10));
+            subtitle.setAlignment(Element.ALIGN_CENTER);
+            subtitle.setSpacingAfter(12f);
+            document.add(subtitle);
+
+            PdfPTable table = new PdfPTable(new float[]{1.2f, 1.8f, 2.2f, 1.4f, 1.4f, 1.1f});
+            table.setWidthPercentage(100f);
+            table.setHeaderRows(1);
+
+            addPdfHeaderCell(table, "Utilisateur");
+            addPdfHeaderCell(table, "Email");
+            addPdfHeaderCell(table, "Structure");
+            addPdfHeaderCell(table, "Arrivee");
+            addPdfHeaderCell(table, "Depart");
+            addPdfHeaderCell(table, "Duree");
+
+            for (PointageExportRowDto row : rows) {
+                addPdfCell(table, safePdf("%s %s".formatted(
+                        defaultString(row.getPrenom()),
+                        defaultString(row.getNom())
+                ).trim()));
+                addPdfCell(table, safePdf(row.getEmail()));
+                addPdfCell(table, safePdf(row.getStructureNom()));
+                addPdfCell(table, row.getDateDebut() != null ? formatter.format(row.getDateDebut()) : "");
+                addPdfCell(table, row.getDateFin() != null ? formatter.format(row.getDateFin()) : "En cours");
+                addPdfCell(table, safePdf(row.getDureeFormatted()));
+            }
+
+            document.add(table);
+
+            Paragraph footer = new Paragraph(
+                    "Genere le " + formatter.format(LocalDateTime.now()),
+                    FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 9)
+            );
+            footer.setSpacingBefore(12f);
+            footer.setAlignment(Element.ALIGN_RIGHT);
+            document.add(footer);
+
+            document.close();
+            return outputStream.toByteArray();
+        } catch (DocumentException | IOException e) {
+            throw new RuntimeException("Impossible de générer le fichier PDF", e);
+        }
+    }
+
     private PointageExportRowDto toExportRow(Pointage pointage) {
         Utilisateur utilisateur = pointage.getUtilisateur();
         LocalDateTime end = pointage.getDateFin() != null ? pointage.getDateFin() : LocalDateTime.now();
@@ -296,5 +373,28 @@ public class PointageService {
         }
 
         cell.setCellValue(String.valueOf(value));
+    }
+
+    private void addPdfHeaderCell(PdfPTable table, String value) {
+        PdfPCell cell = new PdfPCell(new Phrase(value, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10)));
+        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        cell.setPadding(6f);
+        table.addCell(cell);
+    }
+
+    private void addPdfCell(PdfPTable table, String value) {
+        PdfPCell cell = new PdfPCell(new Phrase(value, FontFactory.getFont(FontFactory.HELVETICA, 9)));
+        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+        cell.setPadding(5f);
+        table.addCell(cell);
+    }
+
+    private String safePdf(String value) {
+        return value == null || value.isBlank() ? "—" : value;
+    }
+
+    private String defaultString(String value) {
+        return value == null ? "" : value;
     }
 }

@@ -108,7 +108,7 @@ public class MessageService {
 
         MessageDto dto = toDto(message);
         broadcastMessageUpdate(dto, canal.getIdCanal());
-        notifyDirectRecipients(canal, utilisateur, message.getContenu(), pieceJointeUrl != null && !pieceJointeUrl.isBlank());
+        notifyDirectRecipients(message, canal, utilisateur, message.getContenu(), pieceJointeUrl != null && !pieceJointeUrl.isBlank());
         return dto;
     }
 
@@ -279,6 +279,7 @@ public class MessageService {
                 : "canal";
 
         return MessageSearchResultDto.builder()
+                .id(message.getIdMessage())
                 .idMessage(message.getIdMessage())
                 .canalId(canalId)
                 .conversationName(conversationName)
@@ -343,7 +344,7 @@ public class MessageService {
         messagingTemplate.convertAndSend("/topic/canal/" + canalId, dto);
     }
 
-    private void notifyDirectRecipients(Canal canal, Utilisateur sender, String contenu, boolean hasAttachment) {
+    private void notifyDirectRecipients(Message message, Canal canal, Utilisateur sender, String contenu, boolean hasAttachment) {
         if (canal == null || sender == null || !"direct".equalsIgnoreCase(canal.getTypeCanal())) {
             return;
         }
@@ -365,7 +366,10 @@ public class MessageService {
                 notificationService.createNotification(
                         recipientId,
                         "MESSAGE",
-                        "Nouveau message prive de " + senderName + " : " + preview
+                        "Nouveau message prive de " + senderName + " : " + preview,
+                        "message",
+                        message != null ? message.getIdMessage() : null,
+                        "/chat/canal/" + canal.getIdCanal() + (message != null && message.getIdMessage() != null ? "?message=" + message.getIdMessage() : "")
                 );
             }
         }
@@ -449,6 +453,7 @@ public class MessageService {
         }
 
         return MessageDto.builder()
+                .id(message.getIdMessage())
                 .idMessage(message.getIdMessage())
                 .contenu(message.getContenu())
                 .dateEnvoi(message.getDateEnvoi())

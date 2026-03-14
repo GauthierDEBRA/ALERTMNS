@@ -26,8 +26,10 @@ public class AuditLogController {
     public ResponseEntity<List<AuditLogDto>> getAuditLogs(
             @RequestParam(required = false) Long actorId,
             @RequestParam(required = false) String action,
+            @RequestParam(required = false) String targetType,
+            @RequestParam(required = false) String query,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
-        return ResponseEntity.ok(auditLogService.getAuditLogs(actorId, action, start, end));
+        return ResponseEntity.ok(auditLogService.getAuditLogs(actorId, action, targetType, query, start, end));
     }
 }

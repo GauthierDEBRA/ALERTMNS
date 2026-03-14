@@ -98,6 +98,12 @@ async function handleNotifClick(notif) {
     await notifStore.markAsRead(notif.id)
   }
 
+  if (notif.targetRoute) {
+    router.push(notif.targetRoute)
+    isOpen.value = false
+    return
+  }
+
   const type = String(notif.type || '').toUpperCase()
 
   if (type === 'REUNION') {

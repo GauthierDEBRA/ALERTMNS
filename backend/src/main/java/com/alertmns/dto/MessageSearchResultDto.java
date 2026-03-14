@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class MessageSearchResultDto {
 
+    private Long id;
     private Long idMessage;
     private Long canalId;
     private String conversationName;

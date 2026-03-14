@@ -32,12 +32,23 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     environment:
       TZ: Europe/Paris
       JAVA_TOOL_OPTIONS: -Duser.timezone=Europe/Paris
+      JWT_SECRET: ${JWT_SECRET}
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/alertmns?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Europe/Paris
       SPRING_DATASOURCE_USERNAME: alertmns
       SPRING_DATASOURCE_PASSWORD: alertmns
+      SPRING_MAIL_HOST: mailpit
+      SPRING_MAIL_PORT: 1025
+      SPRING_MAIL_SMTP_AUTH: "false"
+      SPRING_MAIL_SMTP_STARTTLS: "false"
+      ALERTMNS_MAIL_ENABLED: "true"
+      ALERTMNS_MAIL_FROM: no-reply@alertmns.local
+      ALERTMNS_MAIL_FROM_NAME: ALERTMNS
+      ALERTMNS_APP_BASE_URL: http://localhost
     ports:
       - "8080:8080"
     volumes:
@@ -70,6 +81,17 @@ services:
         condition: service_healthy
     ports:
       - "8081:8080"
+
+  # ─── Mailpit (SMTP dev + interface web) ─────────────────────────────────────
+  mailpit:
+    image: axllent/mailpit:v1.21
+    container_name: alertmns-mailpit
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Paris
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 
 volumes:
   db_data:

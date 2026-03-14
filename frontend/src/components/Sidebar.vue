@@ -576,15 +576,15 @@ function openSearchResult(result) {
     path: `/chat/canal/${result.canalId}`,
     query: {
       search: globalSearchQuery.value.trim(),
-      message: String(result.idMessage)
+      message: String(result.id ?? result.idMessage)
     }
   })
   emit('close')
 }
 
-function handleLogout() {
+async function handleLogout() {
   disconnectWebSocket()
-  authStore.logout()
+  await authStore.logout()
   router.push('/login')
 }
 

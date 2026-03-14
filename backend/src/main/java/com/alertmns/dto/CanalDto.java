@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class CanalDto {
+    private Long id;
     private Long idCanal;
     private String nom;
     private Boolean estPrive;

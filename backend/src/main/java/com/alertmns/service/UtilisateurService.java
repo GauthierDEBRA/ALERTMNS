@@ -244,6 +244,7 @@ public class UtilisateurService {
 
     public UserDto toDto(Utilisateur u, boolean isPresent) {
         return UserDto.builder()
+                .id(u.getIdUser())
                 .idUser(u.getIdUser())
                 .nom(u.getNom())
                 .prenom(u.getPrenom())

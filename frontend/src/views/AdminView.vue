@@ -178,6 +178,9 @@
             <button class="btn btn-primary btn-sm" @click="exportPointagesXlsx" :disabled="pointageXlsxExporting">
               {{ pointageXlsxExporting ? 'Export...' : 'Exporter XLSX' }}
             </button>
+            <button class="btn btn-primary btn-sm" @click="exportPointagesPdf" :disabled="pointagePdfExporting">
+              {{ pointagePdfExporting ? 'Export...' : 'Exporter PDF' }}
+            </button>
           </div>
         </div>
 
@@ -234,6 +237,18 @@
       <!-- Audit Tab -->
       <div v-if="activeTab === 'audit' && canViewAudit">
         <div class="content-header">
+          <div class="search-bar audit-search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              v-model="auditQuery"
+              type="text"
+              placeholder="Rechercher dans l'audit : acteur, action, cible, détail..."
+              class="search-input"
+            />
+          </div>
           <div class="filter-group">
             <select v-model="auditActorFilter" class="form-input" style="width: auto;">
               <option value="">Tous les acteurs</option>
@@ -244,6 +259,12 @@
             <select v-model="auditActionFilter" class="form-input" style="width: auto;">
               <option value="">Toutes les actions</option>
               <option v-for="action in auditActionOptions" :key="action" :value="action">{{ action }}</option>
+            </select>
+            <select v-model="auditTargetTypeFilter" class="form-input" style="width: auto;">
+              <option value="">Toutes les cibles</option>
+              <option v-for="targetType in auditTargetTypeOptions" :key="targetType" :value="targetType">
+                {{ targetType }}
+              </option>
             </select>
             <input v-model="auditStart" class="form-input" style="width: auto;" type="date" />
             <input v-model="auditEnd" class="form-input" style="width: auto;" type="date" />
@@ -778,10 +799,13 @@ const pointageError = ref('')
 const pointageSuccess = ref('')
 const pointageExporting = ref(false)
 const pointageXlsxExporting = ref(false)
+const pointagePdfExporting = ref(false)
 const auditLogsLoading = ref(false)
 const auditLogs = ref([])
 const auditActorFilter = ref('')
 const auditActionFilter = ref('')
+const auditTargetTypeFilter = ref('')
+const auditQuery = ref('')
 const auditStart = ref('')
 const auditEnd = ref('')
 const auditError = ref('')
@@ -858,6 +882,7 @@ const auditActionOptions = [
   'POINTAGE_REPORT_VIEW',
   'POINTAGE_EXPORT_CSV',
   'POINTAGE_EXPORT_XLSX',
+  'POINTAGE_EXPORT_PDF',
   'USER_CREATE',
   'USER_UPDATE',
   'USER_PASSWORD_RESET',
@@ -879,6 +904,14 @@ const auditActionOptions = [
   'REUNION_INVITE',
   'REUNION_REMOVE_PARTICIPANT',
   'REUNION_MANUAL_REMINDER'
+]
+
+const auditTargetTypeOptions = [
+  'pointage',
+  'user',
+  'structure',
+  'canal',
+  'reunion'
 ]
 
 const filteredUsers = computed(() => {
@@ -1103,6 +1136,40 @@ async function exportPointagesXlsx() {
   }
 }
 
+async function exportPointagesPdf() {
+  if (!canManagePointages.value) return
+
+  pointagePdfExporting.value = true
+  pointageError.value = ''
+  pointageSuccess.value = ''
+
+  try {
+    const response = await api.get('/pointage/admin/export/pdf', {
+      params: {
+        ...(pointageUserFilter.value ? { userId: pointageUserFilter.value } : {}),
+        ...(pointageStart.value ? { start: pointageStart.value } : {}),
+        ...(pointageEnd.value ? { end: pointageEnd.value } : {})
+      },
+      responseType: 'blob'
+    })
+
+    const blob = new Blob([response.data], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'pointages-export.pdf'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    pointageSuccess.value = 'Export PDF généré.'
+  } catch (e) {
+    pointageError.value = e.response?.data?.message || "Impossible d'exporter les pointages en PDF."
+  } finally {
+    pointagePdfExporting.value = false
+  }
+}
+
 async function fetchAuditLogs() {
   if (!canViewAudit.value) {
     auditLogs.value = []
@@ -1117,6 +1184,8 @@ async function fetchAuditLogs() {
       params: {
         ...(auditActorFilter.value ? { actorId: auditActorFilter.value } : {}),
         ...(auditActionFilter.value ? { action: auditActionFilter.value } : {}),
+        ...(auditTargetTypeFilter.value ? { targetType: auditTargetTypeFilter.value } : {}),
+        ...(auditQuery.value.trim() ? { query: auditQuery.value.trim() } : {}),
         ...(auditStart.value ? { start: auditStart.value } : {}),
         ...(auditEnd.value ? { end: auditEnd.value } : {})
       }
@@ -1599,7 +1668,7 @@ watch([pointageUserFilter, pointageStart, pointageEnd], () => {
   }
 })
 
-watch([auditActorFilter, auditActionFilter, auditStart, auditEnd], () => {
+watch([auditActorFilter, auditActionFilter, auditTargetTypeFilter, auditQuery, auditStart, auditEnd], () => {
   if (canViewAudit.value) {
     fetchAuditLogs()
   }

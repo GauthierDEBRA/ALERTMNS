@@ -204,6 +204,38 @@ public class PointageController {
         }
     }
 
+    @GetMapping("/admin/export/pdf")
+    @PreAuthorize("hasRole('Admin') or hasRole('RH')")
+    public ResponseEntity<?> exportAdminReportPdf(@RequestParam(required = false) Long userId,
+                                                  @RequestParam(required = false) String start,
+                                                  @RequestParam(required = false) String end,
+                                                  Authentication authentication) {
+        try {
+            UserDto requester = utilisateurService.getUserByEmail(authentication.getName());
+            LocalDate startDate = parseDate(start);
+            LocalDate endDate = parseDate(end);
+            byte[] pdf = pointageService.exportPointagesPdf(userId, startDate, endDate);
+            auditLogService.logAction(
+                    requester.getIdUser(),
+                    "POINTAGE_EXPORT_PDF",
+                    "pointage",
+                    userId,
+                    "Export PDF des pointages" + buildDateFilterSuffix(startDate, endDate)
+            );
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentDispositionFormData("attachment", "pointages-export.pdf");
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
     private LocalDate parseDate(String value) {
         if (value == null || value.isBlank()) {
             return null;

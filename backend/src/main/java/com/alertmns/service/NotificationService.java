@@ -20,9 +20,20 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UtilisateurRepository utilisateurRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final NotificationEmailService notificationEmailService;
 
     @Transactional
     public Notification createNotification(Long userId, String type, String contenu) {
+        return createNotification(userId, type, contenu, null, null, null);
+    }
+
+    @Transactional
+    public Notification createNotification(Long userId,
+                                           String type,
+                                           String contenu,
+                                           String targetType,
+                                           Long targetId,
+                                           String targetRoute) {
         Utilisateur utilisateur = utilisateurRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé: " + userId));
 
@@ -35,6 +46,9 @@ public class NotificationService {
                 .contenu(contenu)
                 .isLu(false)
                 .dateCreation(LocalDateTime.now())
+                .targetType(targetType)
+                .targetId(targetId)
+                .targetRoute(targetRoute)
                 .utilisateur(utilisateur)
                 .build();
 
@@ -42,10 +56,12 @@ public class NotificationService {
 
         // Push via WebSocket
         try {
-            messagingTemplate.convertAndSend("/queue/notifications/" + userId, notification);
+            messagingTemplate.convertAndSendToUser(utilisateur.getEmail(), "/queue/notifications", notification);
         } catch (Exception e) {
             // WebSocket might not be available, ignore silently
         }
+
+        notificationEmailService.sendNotificationEmail(notification);
 
         return notification;
     }

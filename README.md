@@ -21,13 +21,18 @@
 # 1. Cloner / se placer dans le dossier
 cd /chemin/vers/ALERTMNS
 
-# 2. Lancer toute la stack (première fois ~3-5 min pour build)
+# 2. Préparer les variables d'environnement locales
+cp .env.example .env
+# puis remplacer JWT_SECRET par une vraie valeur longue et aléatoire
+
+# 3. Lancer toute la stack (première fois ~3-5 min pour build)
 docker compose up --build
 
-# 3. L'application est disponible sur :
+# 4. L'application est disponible sur :
 #    http://localhost       ← Interface web
 #    http://localhost:8080  ← API Spring Boot
 #    http://localhost:8081  ← Adminer (interface base de données)
+#    http://localhost:8025  ← Mailpit (emails de dev)
 #    localhost:3306         ← MySQL
 ```
 
@@ -127,6 +132,7 @@ ALERTMNS/
 ```bash
 cd backend
 # Modifier application.properties : spring.datasource.url=jdbc:mysql://localhost:3306/alertmns
+export JWT_SECRET='une-cle-secrete-locale-tres-longue'
 ./mvn-local.sh spring-boot:run
 ```
 
