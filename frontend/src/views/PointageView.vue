@@ -47,10 +47,6 @@
             <span>{{ loading ? 'Traitement...' : (isPresent ? 'Signaler mon départ' : 'Signaler mon arrivée') }}</span>
           </button>
 
-          <p class="checkin-hint">
-            {{ isPresent ? 'Cliquez pour enregistrer votre départ' : 'Cliquez pour enregistrer votre arrivée' }}
-          </p>
-
           <p v-if="pointageError" class="checkin-error">
             {{ pointageError }}
           </p>
@@ -273,9 +269,8 @@ async function togglePointage() {
 let refreshInterval = null
 
 onMounted(async () => {
-  await fetchPresent()
-  await fetchStats()
-  refreshInterval = setInterval(fetchPresent, 60000)
+  await Promise.all([fetchPresent(), fetchStats()])
+  refreshInterval = setInterval(() => Promise.all([fetchPresent(), fetchStats()]), 60000)
 })
 
 onUnmounted(() => {

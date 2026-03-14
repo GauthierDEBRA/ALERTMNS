@@ -69,7 +69,8 @@
         <div class="stat-card">
           <div class="stat-icon" style="background: rgba(159,122,234,0.1); color: #9f7aea">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
             </svg>
           </div>
           <div class="stat-info">
@@ -84,15 +85,26 @@
         <h3 class="section-title">Accès rapide</h3>
         <div class="actions-grid">
           <div class="action-card channel-shortcuts-card" v-if="channelsStore.channels.length > 0">
-            <router-link
-              v-for="channel in channelsStore.sortedChannels.slice(0, 3)"
-              :key="channel.id"
-              :to="`/chat/canal/${channel.id}`"
-              class="channel-shortcut"
-            >
-              <span class="shortcut-hash">#</span>
-              <span>{{ channel.nom.replace(/^#/, '') }}</span>
-            </router-link>
+            <div class="action-icon channel-shortcuts-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="4" y1="9" x2="20" y2="9"/>
+                <line x1="4" y1="15" x2="20" y2="15"/>
+                <line x1="10" y1="3" x2="8" y2="21"/>
+                <line x1="16" y1="3" x2="14" y2="21"/>
+              </svg>
+            </div>
+            <span class="action-label">Canaux récents</span>
+            <div class="channel-shortcuts-list">
+              <router-link
+                v-for="channel in channelsStore.sortedChannels.slice(0, 3)"
+                :key="channel.id"
+                :to="`/chat/canal/${channel.id}`"
+                class="channel-shortcut"
+              >
+                <span class="shortcut-hash">#</span>
+                <span>{{ channel.nom.replace(/^#/, '') }}</span>
+              </router-link>
+            </div>
           </div>
 
           <router-link to="/pointage" class="action-card action-pointage">
@@ -367,15 +379,27 @@ onMounted(() => {
   color: var(--text-light);
 }
 
+.channel-shortcuts-icon {
+  background: rgba(232, 80, 26, 0.1);
+  color: var(--primary);
+}
+
+.channel-shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+
 .channel-shortcut {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 8px;
+  padding: 5px 8px;
   border-radius: var(--radius-sm);
   text-decoration: none;
   color: var(--text);
-  font-size: 14px;
+  font-size: 13px;
   transition: var(--transition);
 }
 

@@ -237,20 +237,13 @@
             <span class="activity-status-time">{{ arrivedAtLabel }}</span>
           </div>
 
-          <div class="mini-stats-grid">
-            <div class="mini-stat-card">
-              <span class="mini-stat-label">Aujourd'hui</span>
-              <strong>{{ pointageStats?.dailyFormatted || '0h00' }}</strong>
-            </div>
-            <div class="mini-stat-card">
-              <span class="mini-stat-label">Semaine</span>
-              <strong>{{ pointageStats?.weeklyFormatted || '0h00' }}</strong>
-            </div>
-            <div class="mini-stat-card">
-              <span class="mini-stat-label">Mois</span>
-              <strong>{{ pointageStats?.monthlyFormatted || '0h00' }}</strong>
-            </div>
-          </div>
+          <router-link to="/pointage" class="activity-pointage-link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Voir le détail du pointage
+          </router-link>
         </div>
 
         <div class="card profil-section">
@@ -1198,10 +1191,42 @@ onMounted(async () => {
 }
 
 .switch-input {
+  appearance: none;
+  -webkit-appearance: none;
   width: 42px;
-  height: 22px;
-  accent-color: var(--primary);
+  height: 24px;
+  border-radius: 12px;
+  background: #cbd5e0;
+  position: relative;
+  cursor: pointer;
   flex-shrink: 0;
+  transition: background 0.2s ease;
+  outline: none;
+}
+
+.switch-input::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease;
+}
+
+.switch-input:checked {
+  background: var(--primary);
+}
+
+.switch-input:checked::after {
+  transform: translateX(18px);
+}
+
+.switch-input:focus-visible {
+  box-shadow: 0 0 0 3px rgba(232, 80, 26, 0.25);
 }
 
 .activity-status {
@@ -1225,6 +1250,23 @@ onMounted(async () => {
 .activity-status-time {
   font-size: 13px;
   font-weight: 600;
+}
+
+.activity-pointage-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.activity-pointage-link:hover {
+  text-decoration: underline;
+  opacity: 0.85;
 }
 
 .mini-stats-grid {

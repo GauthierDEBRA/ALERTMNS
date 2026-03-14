@@ -115,16 +115,31 @@
         <div class="all-section">
           <div class="section-heading-row">
             <h2 class="section-heading">Toutes mes réunions</h2>
-            <div class="meeting-filters">
-              <button
-                v-for="filter in reunionFilters"
-                :key="filter.id"
-                class="filter-btn"
-                :class="{ 'filter-btn-active': activeFilter === filter.id }"
-                @click="activeFilter = filter.id"
-              >
-                {{ filter.label }}
-              </button>
+            <div class="reunions-toolbar">
+              <div class="reunions-search">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"/>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input
+                  v-model="reunionSearch"
+                  type="text"
+                  placeholder="Rechercher une réunion..."
+                  class="reunions-search-input"
+                />
+                <button v-if="reunionSearch" class="reunions-search-clear" @click="reunionSearch = ''">✕</button>
+              </div>
+              <div class="meeting-filters">
+                <button
+                  v-for="filter in reunionFilters"
+                  :key="filter.id"
+                  class="filter-btn"
+                  :class="{ 'filter-btn-active': activeFilter === filter.id }"
+                  @click="activeFilter = filter.id"
+                >
+                  {{ filter.label }}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -243,7 +258,14 @@
                         Envoyer un rappel
                       </button>
                       <div class="menu-divider"></div>
-                      <button class="menu-item menu-item-danger" @click.stop="deleteReunion(reunion); openMenuId = null">
+                      <template v-if="confirmDeleteReunionId === reunion.id">
+                        <div class="menu-confirm-row">
+                          <span class="menu-confirm-text">Supprimer ?</span>
+                          <button class="menu-item menu-item-danger menu-confirm-yes" @click.stop="deleteReunion(reunion); openMenuId = null">Oui</button>
+                          <button class="menu-item menu-confirm-no" @click.stop="confirmDeleteReunionId = null">Non</button>
+                        </div>
+                      </template>
+                      <button v-else class="menu-item menu-item-danger" @click.stop="confirmDeleteReunionId = reunion.id">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                           <polyline points="3 6 5 6 21 6"/>
                           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
@@ -511,9 +533,17 @@ const selectedInvitees = ref([])
 const activeFilter = ref('all')
 const openMenuId = ref(null)
 const highlightedReunionId = ref(null)
+const reunionSearch = ref('')
+const confirmDeleteReunionId = ref(null)
 
 function toggleMenu(id) {
-  openMenuId.value = openMenuId.value === id ? null : id
+  if (openMenuId.value === id) {
+    openMenuId.value = null
+    confirmDeleteReunionId.value = null
+  } else {
+    openMenuId.value = id
+    confirmDeleteReunionId.value = null
+  }
 }
 
 const form = ref({
@@ -737,20 +767,26 @@ const sortedReunions = computed(() =>
 
 const filteredReunions = computed(() => {
   const now = new Date()
+  const query = reunionSearch.value.trim().toLowerCase()
 
   return sortedReunions.value.filter((reunion) => {
     const meetingDate = new Date(reunion.datePrevue)
 
-    switch (activeFilter.value) {
-      case 'upcoming':
-        return meetingDate >= now
-      case 'past':
-        return meetingDate < now
-      case 'organized':
-        return isOrganizer(reunion)
-      default:
-        return true
-    }
+    const matchesFilter = (() => {
+      switch (activeFilter.value) {
+        case 'upcoming': return meetingDate >= now
+        case 'past': return meetingDate < now
+        case 'organized': return isOrganizer(reunion)
+        default: return true
+      }
+    })()
+
+    const matchesSearch = !query ||
+      reunion.titre?.toLowerCase().includes(query) ||
+      reunion.description?.toLowerCase().includes(query) ||
+      reunion.lieu?.toLowerCase().includes(query)
+
+    return matchesFilter && matchesSearch
   })
 })
 
@@ -1012,9 +1048,7 @@ async function respondToReunion(id, statut) {
 async function deleteReunion(reunion) {
   if (!reunion?.id) return
 
-  const confirmed = window.confirm(`Supprimer la réunion "${reunion.titre}" ?`)
-  if (!confirmed) return
-
+  confirmDeleteReunionId.value = null
   deletingId.value = reunion.id
   responseSuccess.value = ''
   responseError.value = ''
@@ -1064,6 +1098,7 @@ async function sendReminder(reunion) {
 function handleDocumentClick(e) {
   if (!e.target.closest('.reunion-menu-wrapper')) {
     openMenuId.value = null
+    confirmDeleteReunionId.value = null
   }
 }
 
@@ -1164,7 +1199,7 @@ watch(
 
 .section-heading-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 16px;
@@ -1173,6 +1208,57 @@ watch(
 
 .section-heading-row .section-heading {
   margin-bottom: 0;
+}
+
+.reunions-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.reunions-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  min-width: 220px;
+}
+
+.reunions-search svg {
+  color: var(--text-light);
+  flex-shrink: 0;
+}
+
+.reunions-search-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+}
+
+.reunions-search-input::placeholder {
+  color: var(--text-light);
+}
+
+.reunions-search-clear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-light);
+  font-size: 12px;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.reunions-search-clear:hover {
+  color: var(--text);
 }
 
 .meeting-filters {
@@ -1523,6 +1609,31 @@ watch(
   height: 1px;
   background: var(--border);
   margin: 4px 0;
+}
+
+.menu-confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+}
+
+.menu-confirm-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--danger);
+  flex: 1;
+}
+
+.menu-confirm-yes,
+.menu-confirm-no {
+  padding: 3px 8px;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+}
+
+.menu-confirm-no {
+  color: var(--text-light);
 }
 
 .action-btn {

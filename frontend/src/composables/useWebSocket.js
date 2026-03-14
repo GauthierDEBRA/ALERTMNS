@@ -1,5 +1,6 @@
 import { ref, onUnmounted } from 'vue'
 import { Client } from '@stomp/stompjs'
+import SockJS from 'sockjs-client'
 
 let stompClient = null
 let connectionPromise = null
@@ -7,7 +8,7 @@ const subscriptions = new Map()
 const connectionState = ref('disconnected') // 'disconnected' | 'connecting' | 'connected'
 
 function buildWebSocketUrl(token) {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:'
   const baseUrl = `${protocol}//${window.location.host}/ws`
   return token ? `${baseUrl}?token=${encodeURIComponent(token)}` : baseUrl
 }
@@ -25,7 +26,7 @@ function getOrCreateClient(token) {
     connectionState.value = 'connecting'
 
     const client = new Client({
-      webSocketFactory: () => new WebSocket(buildWebSocketUrl(token)),
+      webSocketFactory: () => new SockJS(buildWebSocketUrl(token)),
       connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
       debug: () => {},
       reconnectDelay: 5000,

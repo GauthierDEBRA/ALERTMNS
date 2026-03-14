@@ -128,9 +128,15 @@
                         <path d="M7 11V8a5 5 0 0 1 10 0v3"/>
                       </svg>
                     </button>
+                    <template v-if="confirmDeleteUserId === user.id">
+                      <span class="confirm-delete-text">Supprimer ?</span>
+                      <button class="icon-btn icon-danger" @click="deleteUser(user)" :disabled="deletingUserId === user.id" title="Confirmer">✓</button>
+                      <button class="icon-btn" @click="confirmDeleteUserId = null" title="Annuler">✕</button>
+                    </template>
                     <button
+                      v-else
                       class="icon-btn icon-danger"
-                      @click="deleteUser(user)"
+                      @click="confirmDeleteUserId = user.id"
                       :disabled="deletingUserId === user.id || user.id === authStore.user?.id"
                       title="Supprimer"
                     >
@@ -172,15 +178,34 @@
             <button class="btn btn-secondary btn-sm" @click="fetchPointages" :disabled="pointagesLoading">
               {{ pointagesLoading ? 'Chargement...' : 'Actualiser' }}
             </button>
-            <button class="btn btn-primary btn-sm" @click="exportPointagesCsv" :disabled="pointageExporting">
-              {{ pointageExporting ? 'Export...' : 'Exporter CSV' }}
-            </button>
-            <button class="btn btn-primary btn-sm" @click="exportPointagesXlsx" :disabled="pointageXlsxExporting">
-              {{ pointageXlsxExporting ? 'Export...' : 'Exporter XLSX' }}
-            </button>
-            <button class="btn btn-primary btn-sm" @click="exportPointagesPdf" :disabled="pointagePdfExporting">
-              {{ pointagePdfExporting ? 'Export...' : 'Exporter PDF' }}
-            </button>
+            <div class="export-dropdown-wrapper">
+              <button
+                class="btn btn-primary btn-sm export-dropdown-btn"
+                @click.stop="showExportDropdown = !showExportDropdown"
+                :disabled="pointageExporting || pointageXlsxExporting || pointagePdfExporting"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Exporter
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+              <div v-if="showExportDropdown" class="export-dropdown">
+                <button class="export-dropdown-item" @click="exportPointagesCsv(); showExportDropdown = false" :disabled="pointageExporting">
+                  {{ pointageExporting ? 'Export...' : 'CSV (.csv)' }}
+                </button>
+                <button class="export-dropdown-item" @click="exportPointagesXlsx(); showExportDropdown = false" :disabled="pointageXlsxExporting">
+                  {{ pointageXlsxExporting ? 'Export...' : 'Excel (.xlsx)' }}
+                </button>
+                <button class="export-dropdown-item" @click="exportPointagesPdf(); showExportDropdown = false" :disabled="pointagePdfExporting">
+                  {{ pointagePdfExporting ? 'Export...' : 'PDF (.pdf)' }}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -391,9 +416,6 @@
                 </svg>
                 <span>{{ canal.membresCount || 0 }} membre{{ (canal.membresCount || 0) > 1 ? 's' : '' }}</span>
               </div>
-              <button class="btn btn-secondary btn-sm canal-manage-btn" @click.stop="openChannelMembers(canal)">
-                Gérer
-              </button>
             </div>
           </div>
         </div>
@@ -443,7 +465,12 @@
                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                   </svg>
                 </button>
-                <button class="icon-btn icon-danger" @click="deleteStructure(structure)" :disabled="deletingStructureId === structure.id" title="Supprimer">
+                <template v-if="confirmDeleteStructureId === structure.id">
+                  <span class="confirm-delete-text">Supprimer ?</span>
+                  <button class="icon-btn icon-danger" @click="deleteStructure(structure)" :disabled="deletingStructureId === structure.id" title="Confirmer">✓</button>
+                  <button class="icon-btn" @click="confirmDeleteStructureId = null" title="Annuler">✕</button>
+                </template>
+                <button v-else class="icon-btn icon-danger" @click="confirmDeleteStructureId = structure.id" :disabled="deletingStructureId === structure.id" title="Supprimer">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="3 6 5 6 21 6"/>
                     <path d="M19 6l-1 14H6L5 6"/>
@@ -675,9 +702,15 @@
               <p class="modal-helper modal-helper-tight">{{ selectedChannel?.nom }}</p>
             </div>
             <div class="modal-header-actions">
+              <template v-if="confirmDeleteChannelId === selectedChannel?.id">
+                <span class="confirm-delete-text">Supprimer le canal ?</span>
+                <button class="btn btn-danger btn-sm" @click="deleteSelectedChannel" :disabled="deletingChannelId === selectedChannel?.id">Oui</button>
+                <button class="btn btn-secondary btn-sm" @click="confirmDeleteChannelId = null">Non</button>
+              </template>
               <button
+                v-else
                 class="btn btn-danger btn-sm"
-                @click="deleteSelectedChannel"
+                @click="confirmDeleteChannelId = selectedChannel?.id"
                 :disabled="deletingChannelId === selectedChannel?.id"
               >
                 {{ deletingChannelId === selectedChannel?.id ? 'Suppression...' : 'Supprimer le canal' }}
@@ -743,9 +776,15 @@
                     <option value="membre">Membre</option>
                     <option value="admin">Admin canal</option>
                   </select>
+                  <template v-if="confirmRemoveChannelMemberId === member.userId">
+                    <span class="confirm-delete-text">Retirer ?</span>
+                    <button class="icon-btn icon-danger" @click="removeChannelMember(member)" :disabled="removingChannelMemberId === member.userId" title="Confirmer">✓</button>
+                    <button class="icon-btn" @click="confirmRemoveChannelMemberId = null" title="Annuler">✕</button>
+                  </template>
                   <button
+                    v-else
                     class="icon-btn icon-danger"
-                    @click="removeChannelMember(member)"
+                    @click="member.userId !== authStore.user?.id && (confirmRemoveChannelMemberId = member.userId)"
                     :disabled="removingChannelMemberId === member.userId || member.userId === authStore.user?.id"
                     :title="member.userId === authStore.user?.id ? 'Retrait de votre compte désactivé ici' : 'Retirer du canal'"
                   >
@@ -771,7 +810,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import NotificationPanel from '../components/NotificationPanel.vue'
 import api from '../api/axios.js'
 import { useChannelsStore } from '../stores/channels.js'
@@ -830,6 +869,7 @@ const editError = ref('')
 const editSuccess = ref('')
 const saving = ref(false)
 const deletingUserId = ref(null)
+const confirmDeleteUserId = ref(null)
 
 const showResetPassword = ref(false)
 const resetPasswordTarget = ref(null)
@@ -851,8 +891,10 @@ const channelMembersSuccess = ref('')
 const channelMemberForm = ref({ userId: null })
 const addingChannelMember = ref(false)
 const removingChannelMemberId = ref(null)
+const confirmRemoveChannelMemberId = ref(null)
 const updatingChannelRoleId = ref(null)
 const deletingChannelId = ref(null)
+const confirmDeleteChannelId = ref(null)
 
 const showStructureModal = ref(false)
 const editingStructureId = ref(null)
@@ -861,6 +903,8 @@ const structureError = ref('')
 const structureSuccess = ref('')
 const savingStructure = ref(false)
 const deletingStructureId = ref(null)
+const confirmDeleteStructureId = ref(null)
+const showExportDropdown = ref(false)
 
 const isAdmin = computed(() => authStore.user?.role === 'Admin')
 const isRH = computed(() => authStore.user?.role === 'RH')
@@ -1340,9 +1384,7 @@ async function resetPassword() {
 async function deleteUser(user) {
   if (!user?.id || user.id === authStore.user?.id) return
 
-  const confirmed = window.confirm(`Supprimer le compte de ${user.prenom} ${user.nom} ?`)
-  if (!confirmed) return
-
+  confirmDeleteUserId.value = null
   deletingUserId.value = user.id
   try {
     await api.delete(`/users/${user.id}`)
@@ -1455,9 +1497,7 @@ async function saveStructure() {
 async function deleteStructure(structure) {
   if (!structure?.id) return
 
-  const confirmed = window.confirm(`Supprimer la structure "${structure.nom}" ?`)
-  if (!confirmed) return
-
+  confirmDeleteStructureId.value = null
   deletingStructureId.value = structure.id
   try {
     await api.delete(`/structures/${structure.id}`)
@@ -1593,9 +1633,7 @@ async function updateChannelMemberRole(member, role) {
 async function removeChannelMember(member) {
   if (!selectedChannel.value?.id || !member?.userId || member.userId === authStore.user?.id) return
 
-  const confirmed = window.confirm(`Retirer ${member.prenom} ${member.nom} du canal ${selectedChannel.value.nom} ?`)
-  if (!confirmed) return
-
+  confirmRemoveChannelMemberId.value = null
   removingChannelMemberId.value = member.userId
   channelMembersError.value = ''
   channelMembersSuccess.value = ''
@@ -1617,9 +1655,7 @@ async function removeChannelMember(member) {
 async function deleteSelectedChannel() {
   if (!selectedChannel.value?.id) return
 
-  const confirmed = window.confirm(`Supprimer définitivement le canal ${selectedChannel.value.nom} ?`)
-  if (!confirmed) return
-
+  confirmDeleteChannelId.value = null
   deletingChannelId.value = selectedChannel.value.id
   channelMembersError.value = ''
   channelMembersSuccess.value = ''
@@ -1636,6 +1672,10 @@ async function deleteSelectedChannel() {
   }
 }
 
+function handleAdminDocumentClick() {
+  showExportDropdown.value = false
+}
+
 onMounted(async () => {
   if (!tabs.value.some(tab => tab.id === activeTab.value)) {
     activeTab.value = 'users'
@@ -1647,6 +1687,12 @@ onMounted(async () => {
   if (canManageChannels.value) tasks.push(fetchCanaux())
   if (isAdmin.value) tasks.push(fetchStructures())
   await Promise.all(tasks)
+
+  document.addEventListener('click', handleAdminDocumentClick)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleAdminDocumentClick)
 })
 
 watch([pointageUserFilter, pointageStart, pointageEnd], () => {
@@ -2062,8 +2108,57 @@ watch([auditActorFilter, auditActionFilter, auditTargetTypeFilter, auditQuery, a
   flex-shrink: 0;
 }
 
-.canal-manage-btn {
-  min-width: 78px;
+.export-dropdown-wrapper {
+  position: relative;
+}
+
+.export-dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.export-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  z-index: 50;
+  min-width: 150px;
+  overflow: hidden;
+}
+
+.export-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 9px 16px;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+  transition: var(--transition);
+}
+
+.export-dropdown-item:hover:not(:disabled) {
+  background: var(--content-bg);
+  color: var(--primary);
+}
+
+.export-dropdown-item:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.confirm-delete-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--danger);
+  white-space: nowrap;
 }
 
 .channel-member-add {

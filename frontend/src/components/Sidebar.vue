@@ -28,8 +28,8 @@
       <div class="user-details">
         <span class="user-name">{{ authStore.fullName }}</span>
         <div class="user-status">
-          <span class="status-dot online"></span>
-          <span class="status-text">En ligne</span>
+          <span class="status-dot" :class="{ online: isPresent }"></span>
+          <span class="status-text">{{ isPresent ? 'Présent(e)' : 'Hors ligne' }}</span>
         </div>
       </div>
       <NotificationPanel />
