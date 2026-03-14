@@ -43,10 +43,16 @@ public class WebSocketController {
         if (user == null) return;
 
         try {
-            Long userId = utilisateurService.getUserByEmail(user.getName()).getIdUser();
+            var currentUser = utilisateurService.getUserByEmail(user.getName());
+            Long userId = currentUser.getIdUser();
             messageService.assertUserCanAccessCanal(canalId, userId);
             messagingTemplate.convertAndSend("/topic/canal/" + canalId + "/typing",
-                    java.util.Map.of("email", user.getName()));
+                    java.util.Map.of(
+                            "userId", userId,
+                            "email", user.getName(),
+                            "prenom", currentUser.getPrenom(),
+                            "nom", currentUser.getNom()
+                    ));
         } catch (Exception e) {
             // ignore
         }

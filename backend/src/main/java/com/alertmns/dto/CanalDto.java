@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,6 +18,7 @@ public class CanalDto {
     private Boolean estPrive;
     private String typeCanal;
     private Long membresCount;
+    private LocalDateTime lastMessageAt;
     private Long directUserId;
     private String directUserNom;
     private String directUserPrenom;

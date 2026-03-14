@@ -83,7 +83,7 @@
       <div class="quick-actions">
         <h3 class="section-title">Accès rapide</h3>
         <div class="actions-grid">
-          <router-link to="/chat" class="action-card" v-if="channelsStore.channels.length > 0">
+          <div class="action-card channel-shortcuts-card" v-if="channelsStore.channels.length > 0">
             <router-link
               v-for="channel in channelsStore.sortedChannels.slice(0, 3)"
               :key="channel.id"
@@ -93,7 +93,7 @@
               <span class="shortcut-hash">#</span>
               <span>{{ channel.nom.replace(/^#/, '') }}</span>
             </router-link>
-          </router-link>
+          </div>
 
           <router-link to="/pointage" class="action-card action-pointage">
             <div class="action-icon">

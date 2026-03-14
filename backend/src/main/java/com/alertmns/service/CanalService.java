@@ -5,6 +5,7 @@ import com.alertmns.entity.MembreCanal;
 import com.alertmns.entity.MembreCanalId;
 import com.alertmns.entity.Utilisateur;
 import com.alertmns.repository.CanalRepository;
+import com.alertmns.repository.MessageRepository;
 import com.alertmns.repository.MembreCanalRepository;
 import com.alertmns.repository.UtilisateurRepository;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -23,6 +25,7 @@ public class CanalService {
     private final CanalRepository canalRepository;
     private final MembreCanalRepository membreCanalRepository;
     private final UtilisateurRepository utilisateurRepository;
+    private final MessageRepository messageRepository;
 
     @Transactional(readOnly = true)
     public List<Canal> getAllCanaux() {
@@ -278,14 +281,40 @@ public class CanalService {
 
     private List<Canal> enrichMemberCounts(List<Canal> canaux) {
         canaux.forEach(this::enrichMemberCount);
+        enrichLastMessageDates(canaux);
         return canaux;
     }
 
     private Canal enrichMemberCount(Canal canal) {
         if (canal != null && canal.getIdCanal() != null) {
             canal.setMembresCount(membreCanalRepository.countByIdIdCanal(canal.getIdCanal()));
+            enrichLastMessageDates(List.of(canal));
         }
         return canal;
+    }
+
+    private void enrichLastMessageDates(List<Canal> canaux) {
+        if (canaux == null || canaux.isEmpty()) {
+            return;
+        }
+
+        List<Long> canalIds = canaux.stream()
+                .map(Canal::getIdCanal)
+                .filter(Objects::nonNull)
+                .toList();
+
+        if (canalIds.isEmpty()) {
+            return;
+        }
+
+        Map<Long, java.time.LocalDateTime> lastMessageDates = new HashMap<>();
+        for (Object[] row : messageRepository.findLastMessageDates(canalIds)) {
+            if (row.length >= 2 && row[0] instanceof Long canalId && row[1] instanceof java.time.LocalDateTime dateTime) {
+                lastMessageDates.put(canalId, dateTime);
+            }
+        }
+
+        canaux.forEach(canal -> canal.setLastMessageAt(lastMessageDates.get(canal.getIdCanal())));
     }
 
     private void ensureAnotherAdminExists(Long canalId) {

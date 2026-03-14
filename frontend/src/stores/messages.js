@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import api from '../api/axios.js'
+import { useChannelsStore } from './channels.js'
 
 function normalizeMessage(msg = {}) {
   return {
@@ -77,6 +78,11 @@ export const useMessagesStore = defineStore('messages', {
         this.messages[canalId].splice(tempIdx, 1, normalized)
       } else {
         this.messages[canalId].push(normalized)
+      }
+
+      if (!String(normalized.id || '').startsWith('temp-') && normalized.dateEnvoi) {
+        const channelsStore = useChannelsStore()
+        channelsStore.touchChannelActivity(canalId, normalized.dateEnvoi)
       }
     },
 
@@ -205,16 +211,28 @@ export const useMessagesStore = defineStore('messages', {
       }
     },
 
-    async uploadFile(file) {
+    async uploadFile(file, onProgress = null) {
       try {
         const formData = new FormData()
         formData.append('file', file)
         const response = await api.post('/files/upload', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: (event) => {
+            if (!onProgress || !event.total) return
+            const percent = Math.max(0, Math.min(100, Math.round((event.loaded / event.total) * 100)))
+            onProgress(percent)
+          }
         })
         return { success: true, url: response.data.url, name: file.name }
       } catch (error) {
-        return { success: false, message: 'Erreur lors de l\'upload du fichier' }
+        const status = error.response?.status
+        if (status === 413) {
+          return { success: false, message: 'Fichier trop volumineux. Maximum 10 Mo.' }
+        }
+        if (status === 429) {
+          return { success: false, message: error.response?.data?.message || 'Trop d\'uploads en peu de temps. Réessaie dans quelques minutes.' }
+        }
+        return { success: false, message: error.response?.data?.message || 'Erreur lors de l\'upload du fichier' }
       }
     },
 

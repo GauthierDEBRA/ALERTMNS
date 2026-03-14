@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "t_canal")
 @Data
@@ -31,4 +33,7 @@ public class Canal {
 
     @Transient
     private Long membresCount;
+
+    @Transient
+    private LocalDateTime lastMessageAt;
 }

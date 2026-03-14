@@ -106,8 +106,46 @@ export function useWebSocket() {
     }
   }
 
+  async function subscribeToTyping(canalId, callback) {
+    const destination = `/topic/canal/${canalId}/typing`
+    if (subscriptions.has(destination)) {
+      subscriptions.get(destination).callbacks.add(callback)
+      return
+    }
+
+    try {
+      const client = await getOrCreateClient(localStorage.getItem('token'))
+      const sub = client.subscribe(destination, (frame) => {
+        try {
+          const payload = JSON.parse(frame.body)
+          subscriptions.get(destination)?.callbacks.forEach(cb => cb(payload))
+        } catch (e) {
+          console.error('Error parsing typing payload:', e)
+        }
+      })
+
+      subscriptions.set(destination, {
+        subscription: sub,
+        callbacks: new Set([callback])
+      })
+      localSubscriptions.add(destination)
+    } catch (err) {
+      console.error('Error subscribing to typing events:', err)
+    }
+  }
+
   function unsubscribe(canalId) {
     const destination = `/topic/canal/${canalId}`
+    const entry = subscriptions.get(destination)
+    if (entry) {
+      entry.subscription.unsubscribe()
+      subscriptions.delete(destination)
+      localSubscriptions.delete(destination)
+    }
+  }
+
+  function unsubscribeTyping(canalId) {
+    const destination = `/topic/canal/${canalId}/typing`
     const entry = subscriptions.get(destination)
     if (entry) {
       entry.subscription.unsubscribe()
@@ -140,6 +178,10 @@ export function useWebSocket() {
       ...(pieceJointeNom && { pieceJointeNom })
     }
     await publish(`/app/chat.sendMessage/${canalId}`, payload)
+  }
+
+  async function sendTyping(canalId) {
+    await publish(`/app/chat.typing/${canalId}`, {})
   }
 
   async function subscribeToNotifications(_userId, callback) {
@@ -213,10 +255,13 @@ export function useWebSocket() {
     connect,
     subscribe,
     unsubscribe,
+    subscribeToTyping,
+    unsubscribeTyping,
     subscribeToNotifications,
     subscribeToPresence,
     publish,
     sendMessage,
+    sendTyping,
     disconnect,
     connectionState
   }

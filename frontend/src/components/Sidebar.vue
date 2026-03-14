@@ -372,6 +372,7 @@ import { useAuthStore } from '../stores/auth.js'
 import { useChannelsStore } from '../stores/channels.js'
 import { useMessagesStore } from '../stores/messages.js'
 import { disconnectWebSocket, useWebSocket } from '../composables/useWebSocket.js'
+import { getAvatarColor, getAvatarInitials } from '../utils/avatar.js'
 import NotificationPanel from './NotificationPanel.vue'
 import api from '../api/axios.js'
 
@@ -411,38 +412,18 @@ const availableDirectUsers = computed(() =>
     .sort((a, b) => `${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`, 'fr'))
 )
 
-const AVATAR_COLORS = [
-  '#E8501A', '#4299e1', '#48bb78', '#ed8936', '#9f7aea',
-  '#ed64a6', '#38b2ac', '#667eea', '#fc8181', '#68d391'
-]
-
-function getAvatarColor(user) {
-  const str = `${user.prenom}${user.nom}`
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
-}
-
 const avatarColor = computed(() => getAvatarColor(authStore.user || {}))
 
 function getUserInitials(user) {
-  return `${user.prenom?.[0] || ''}${user.nom?.[0] || ''}`.toUpperCase()
+  return getAvatarInitials(user, '?')
 }
 
 function getDirectInitials(channel) {
-  const prenom = channel.directUserPrenom || ''
-  const nom = channel.directUserNom || ''
-  return `${prenom[0] || ''}${nom[0] || ''}`.toUpperCase() || '@'
+  return getAvatarInitials(channel, '@')
 }
 
 function getDirectAvatarColor(channel) {
-  return getAvatarColor({
-    prenom: channel.directUserPrenom || '',
-    nom: channel.directUserNom || '',
-    email: channel.directUserEmail || ''
-  })
+  return getAvatarColor(channel)
 }
 
 function formatSearchDate(dateInput) {

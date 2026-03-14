@@ -19,11 +19,21 @@
         <span v-else class="channel-hash">#</span>
         <div class="channel-info">
           <h2 class="channel-name">{{ channelDisplayName }}</h2>
-          <span class="member-count">{{ channelSubtitle }}</span>
+          <span class="member-count" :class="{ 'member-count-typing': Boolean(typingLabel) }">
+            {{ typingLabel || channelSubtitle }}
+          </span>
         </div>
       </div>
 
       <div class="header-right">
+        <!-- Search toggle button -->
+        <button class="header-btn" :class="{ 'header-btn-active': showSearch }" @click="toggleSearch" title="Rechercher (Ctrl+F)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </button>
+
         <!-- Members button -->
         <button class="header-btn" @click="showMembers = !showMembers" title="Membres">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -65,24 +75,28 @@
       </div>
     </div>
 
-    <div class="chat-toolbar">
-      <div class="chat-search">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        <input
-          v-model="searchQuery"
-          type="text"
-          class="chat-search-input"
-          placeholder="Rechercher dans cette conversation"
-        />
-        <button v-if="searchQuery" class="chat-search-clear" @click="clearSearch">Effacer</button>
+    <Transition name="search-slide">
+      <div v-if="showSearch" class="chat-toolbar">
+        <div class="chat-search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            ref="searchInputRef"
+            v-model="searchQuery"
+            type="text"
+            class="chat-search-input"
+            placeholder="Rechercher dans cette conversation…"
+            @keydown.escape="toggleSearch"
+          />
+          <button v-if="searchQuery" class="chat-search-clear" @click="clearSearch">Effacer</button>
+        </div>
+        <span v-if="searchQuery.trim()" class="search-count">
+          {{ filteredMessages.length }} résultat{{ filteredMessages.length > 1 ? 's' : '' }}
+        </span>
       </div>
-      <span v-if="searchQuery.trim()" class="search-count">
-        {{ filteredMessages.length }} résultat{{ filteredMessages.length > 1 ? 's' : '' }}
-      </span>
-    </div>
+    </Transition>
 
     <div class="chat-body">
       <!-- Messages area -->
@@ -95,7 +109,7 @@
         <div v-else-if="messages.length === 0" class="messages-empty">
           <div class="empty-channel-icon">{{ isDirectChannel ? '@' : '#' }}</div>
           <h3>{{ isDirectChannel ? `Conversation avec ${channelDisplayName}` : `Bienvenue dans #${channelDisplayName}` }}</h3>
-          <p>{{ isDirectChannel ? 'Dites bonjour pour lancer la conversation privee.' : "C'est le debut de ce canal. Envoyez le premier message !" }}</p>
+          <p>{{ isDirectChannel ? 'Dites bonjour pour lancer la conversation privée.' : "C'est le début de ce canal. Envoyez le premier message !" }}</p>
         </div>
 
         <div v-else-if="filteredMessages.length === 0" class="messages-empty">
@@ -182,6 +196,8 @@
                     class="message-edit-input"
                     rows="3"
                     placeholder="Modifier le message"
+                    @keydown.escape="cancelEditing"
+                    @keydown.enter.ctrl.exact.prevent="saveEdit(group.msg)"
                   ></textarea>
                   <div class="message-edit-actions">
                     <button class="btn btn-secondary btn-sm" @click="cancelEditing">Annuler</button>
@@ -201,8 +217,24 @@
                   </div>
 
                   <div v-if="canManageMessage(group.msg)" class="message-inline-actions">
-                    <button class="message-action-btn" @click="startEditing(group.msg)">Modifier</button>
-                    <button class="message-action-btn danger" @click="removeMessage(group.msg)">Supprimer</button>
+                    <!-- Desktop: text buttons (hidden on mobile) -->
+                    <span class="desktop-msg-actions">
+                      <button class="message-action-btn" @click="startEditing(group.msg)">Modifier</button>
+                      <template v-if="confirmDeleteMessageId === group.msg.id">
+                        <span class="confirm-delete-text">Supprimer ?</span>
+                        <button class="message-action-btn danger" @click="doRemoveMessage(group.msg)">Oui</button>
+                        <button class="message-action-btn" @click="confirmDeleteMessageId = null">Non</button>
+                      </template>
+                      <button v-else class="message-action-btn danger" @click="confirmDeleteMessageId = group.msg.id">Supprimer</button>
+                    </span>
+                    <!-- Mobile: ⋮ button + dropdown (hidden on desktop) -->
+                    <div class="mobile-msg-menu-wrapper">
+                      <button class="message-action-btn mobile-menu-btn" @click.stop="toggleMobileMenu(group.msg.id)" title="Actions">⋮</button>
+                      <div v-if="mobileMenuMessageId === group.msg.id" class="mobile-msg-menu">
+                        <button @click="startEditing(group.msg); mobileMenuMessageId = null">Modifier</button>
+                        <button class="danger" @click="doRemoveMessage(group.msg); mobileMenuMessageId = null">Supprimer</button>
+                      </div>
+                    </div>
                   </div>
                 </template>
 
@@ -229,6 +261,7 @@
                     :key="`${group.msg.id}-${reaction.emoji}`"
                     class="reaction-chip"
                     :class="{ 'reaction-chip-active': hasReacted(reaction) }"
+                    :title="getReactionTooltip(reaction)"
                     @click="toggleReaction(group.msg, reaction.emoji)"
                     :disabled="reactionBusyMessageId === group.msg.id"
                   >
@@ -240,13 +273,13 @@
                     <button
                       class="reaction-add-btn"
                       :class="{ 'reaction-add-btn-active': reactionPickerMessageId === group.msg.id }"
-                      @click="toggleReactionPicker(group.msg.id)"
+                      @click="toggleReactionPicker(group.msg.id, $event)"
                       :disabled="reactionBusyMessageId === group.msg.id"
                     >
                       +
                     </button>
 
-                    <div v-if="reactionPickerMessageId === group.msg.id" class="reaction-picker">
+                    <div v-if="reactionPickerMessageId === group.msg.id" class="reaction-picker" :class="{ 'reaction-picker-above': reactionPickerAbove }">
                       <button
                         v-for="emoji in AVAILABLE_REACTIONS"
                         :key="`${group.msg.id}-${emoji}`"
@@ -273,7 +306,7 @@
           </div>
           <div class="members-list">
             <div v-for="member in members" :key="member.id" class="member-item">
-              <div class="member-avatar" :style="{ background: getAvatarColorById(member) }">
+              <div class="member-avatar" :style="{ background: getAvatarColor(member) }">
                 <img
                   v-if="member.avatarUrl"
                   :src="member.avatarUrl"
@@ -304,6 +337,16 @@
       <div class="input-container">
         <div v-if="sendError" class="send-error">
           {{ sendError }}
+        </div>
+
+        <div v-if="uploadingFile" class="upload-status">
+          <div class="upload-status-row">
+            <span>Envoi du fichier...</span>
+            <span>{{ uploadProgress }}%</span>
+          </div>
+          <div class="upload-progress-track">
+            <div class="upload-progress-bar" :style="{ width: `${uploadProgress}%` }"></div>
+          </div>
         </div>
 
         <!-- File preview -->
@@ -337,7 +380,7 @@
             :placeholder="messagePlaceholder"
             @keydown.enter.exact.prevent="sendMessage"
             @keydown.enter.shift.exact="addNewLine"
-            @input="autoResize"
+            @input="handleComposerInput"
             rows="1"
           ></textarea>
 
@@ -407,6 +450,7 @@ import { useAuthStore } from '../stores/auth.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
 import { useDate } from '../composables/useDate.js'
 import NotificationPanel from '../components/NotificationPanel.vue'
+import { getAvatarColor, getAvatarInitials } from '../utils/avatar.js'
 import api from '../api/axios.js'
 
 const route = useRoute()
@@ -414,13 +458,14 @@ const router = useRouter()
 const channelsStore = useChannelsStore()
 const messagesStore = useMessagesStore()
 const authStore = useAuthStore()
-const { subscribe, unsubscribe, connect } = useWebSocket()
+const { subscribe, unsubscribe, subscribeToTyping, unsubscribeTyping, sendTyping, connect } = useWebSocket()
 const { formatDate, isSameDay, formatDayHeader } = useDate()
 
 const messagesContainer = ref(null)
 const textInput = ref(null)
 const fileInput = ref(null)
 const exportRef = ref(null)
+const searchInputRef = ref(null)
 
 const messageText = ref('')
 const pendingFile = ref(null)
@@ -430,6 +475,7 @@ const editingBusy = ref(false)
 const showMembers = ref(false)
 const showExport = ref(false)
 const showAddMember = ref(false)
+const showSearch = ref(false)
 const members = ref([])
 const memberCount = ref(0)
 const memberAbsenceMap = ref({})
@@ -438,12 +484,20 @@ const selectedUserId = ref('')
 const addingMember = ref(false)
 const addMemberError = ref('')
 const sendError = ref('')
+const uploadingFile = ref(false)
+const uploadProgress = ref(0)
 const searchQuery = ref('')
 const editingMessageId = ref(null)
 const editingText = ref('')
 const reactionPickerMessageId = ref(null)
+const reactionPickerAbove = ref(false)
 const reactionBusyMessageId = ref(null)
 const highlightedMessageId = ref(null)
+const confirmDeleteMessageId = ref(null)
+const mobileMenuMessageId = ref(null)
+const typingUsers = ref({})
+const typingTimers = new Map()
+const lastTypingSentAt = ref(0)
 
 const canalId = computed(() => {
   const parsed = Number(route.params.id)
@@ -454,13 +508,26 @@ const isDirectChannel = computed(() => channel.value?.typeCanal === 'direct')
 const channelDisplayName = computed(() => channel.value?.displayName || 'canal')
 const channelSubtitle = computed(() => {
   if (isDirectChannel.value) {
-    return channel.value?.directUserEmail || 'Conversation privee'
+    return channel.value?.directUserEmail || 'Conversation privée'
   }
   return `${memberCount.value} membre${memberCount.value !== 1 ? 's' : ''}`
 })
+const typingLabel = computed(() => {
+  const activeUsers = Object.values(typingUsers.value)
+  if (!activeUsers.length) return ''
+
+  const names = activeUsers.map(user => `${user.prenom || ''} ${user.nom || ''}`.trim() || user.email || 'Quelqu’un')
+  if (names.length === 1) {
+    return `${names[0]} est en train d'écrire...`
+  }
+  if (names.length === 2) {
+    return `${names[0]} et ${names[1]} écrivent...`
+  }
+  return `${names.length} personnes écrivent...`
+})
 const messagePlaceholder = computed(() =>
   isDirectChannel.value
-    ? `Envoyer un message a ${channelDisplayName.value}`
+    ? `Envoyer un message à ${channelDisplayName.value}`
     : `Envoyer un message dans #${channelDisplayName.value}`
 )
 const messages = computed(() => messagesStore.getMessages(canalId.value))
@@ -477,45 +544,18 @@ const filteredMessages = computed(() => {
   })
 })
 const canSend = computed(() => Boolean(canalId.value && (messageText.value.trim() || pendingFile.value) && !sending.value))
-const directInitials = computed(() =>
-  `${channel.value?.directUserPrenom?.[0] || ''}${channel.value?.directUserNom?.[0] || ''}`.toUpperCase() || '@'
-)
-const directAvatarColor = computed(() => getAvatarColorById({
-  prenom: channel.value?.directUserPrenom || '',
-  nom: channel.value?.directUserNom || ''
-}))
+const directInitials = computed(() => getAvatarInitials(channel.value || {}, '@'))
+const directAvatarColor = computed(() => getAvatarColor(channel.value || {}))
 
 const availableUsers = computed(() => {
   const memberIds = new Set(members.value.map(member => member.userId || member.id))
   return allUsers.value.filter(u => !memberIds.has(u.id))
 })
 
-const AVATAR_COLORS = [
-  '#E8501A', '#4299e1', '#48bb78', '#ed8936', '#9f7aea',
-  '#ed64a6', '#38b2ac', '#667eea', '#fc8181', '#68d391'
-]
 const AVAILABLE_REACTIONS = ['👍', '❤️', '😂', '🎉', '✅', '👀']
 
-function getAvatarColor(msg) {
-  const str = `${msg.auteurPrenom || ''}${msg.auteurNom || ''}${msg.auteurId || ''}`
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
-}
-
-function getAvatarColorById(user) {
-  const str = `${user.prenom || ''}${user.nom || ''}`
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
-}
-
 function getMsgInitials(msg) {
-  return `${msg.auteurPrenom?.[0] || ''}${msg.auteurNom?.[0] || ''}`.toUpperCase() || '?'
+  return getAvatarInitials(msg, '?')
 }
 
 function getMsgFullName(msg) {
@@ -619,6 +659,11 @@ function handleFileSelect(event) {
   }
 }
 
+function handleComposerInput() {
+  autoResize()
+  notifyTyping()
+}
+
 function removePendingFile() {
   pendingFile.value = null
   pendingFileUrl.value = null
@@ -629,8 +674,41 @@ function clearSearch() {
   searchQuery.value = ''
 }
 
-function toggleReactionPicker(messageId) {
-  reactionPickerMessageId.value = reactionPickerMessageId.value === messageId ? null : messageId
+function toggleSearch() {
+  showSearch.value = !showSearch.value
+  if (!showSearch.value) {
+    searchQuery.value = ''
+  } else {
+    nextTick(() => searchInputRef.value?.focus())
+  }
+}
+
+function toggleReactionPicker(messageId, event) {
+  if (reactionPickerMessageId.value === messageId) {
+    reactionPickerMessageId.value = null
+    reactionPickerAbove.value = false
+    return
+  }
+  const btn = event?.currentTarget
+  if (btn) {
+    const rect = btn.getBoundingClientRect()
+    reactionPickerAbove.value = rect.bottom > window.innerHeight - 170
+  }
+  reactionPickerMessageId.value = messageId
+}
+
+function getReactionTooltip(reaction) {
+  if (!reaction?.userIds?.length) return reaction?.emoji || ''
+  const names = reaction.userIds.map(uid => {
+    if (uid === authStore.user?.id) return 'Vous'
+    const member = members.value.find(m => (m.id || m.userId) === uid)
+    return member ? `${member.prenom} ${member.nom}`.trim() : null
+  }).filter(Boolean)
+  return names.length ? names.join(', ') : `${reaction.count} réaction${reaction.count > 1 ? 's' : ''}`
+}
+
+function toggleMobileMenu(messageId) {
+  mobileMenuMessageId.value = mobileMenuMessageId.value === messageId ? null : messageId
 }
 
 function startEditing(msg) {
@@ -642,6 +720,58 @@ function startEditing(msg) {
 function cancelEditing() {
   editingMessageId.value = null
   editingText.value = ''
+}
+
+function clearTypingUsers() {
+  typingUsers.value = {}
+  for (const timeout of typingTimers.values()) {
+    clearTimeout(timeout)
+  }
+  typingTimers.clear()
+}
+
+function handleTypingEvent(payload = {}) {
+  const userId = payload.userId
+  if (!userId || userId === authStore.user?.id) {
+    return
+  }
+
+  typingUsers.value = {
+    ...typingUsers.value,
+    [userId]: {
+      userId,
+      prenom: payload.prenom || '',
+      nom: payload.nom || '',
+      email: payload.email || ''
+    }
+  }
+
+  if (typingTimers.has(userId)) {
+    clearTimeout(typingTimers.get(userId))
+  }
+
+  const timeout = window.setTimeout(() => {
+    const nextUsers = { ...typingUsers.value }
+    delete nextUsers[userId]
+    typingUsers.value = nextUsers
+    typingTimers.delete(userId)
+  }, 2500)
+
+  typingTimers.set(userId, timeout)
+}
+
+function notifyTyping() {
+  if (!canalId.value || !messageText.value.trim()) {
+    return
+  }
+
+  const now = Date.now()
+  if (now - lastTypingSentAt.value < 1500) {
+    return
+  }
+
+  lastTypingSentAt.value = now
+  sendTyping(canalId.value)
 }
 
 async function toggleReaction(msg, emoji) {
@@ -675,17 +805,14 @@ async function saveEdit(msg) {
   cancelEditing()
 }
 
-async function removeMessage(msg) {
-  const confirmed = window.confirm('Supprimer ce message ?')
-  if (!confirmed) return
-
+async function doRemoveMessage(msg) {
+  confirmDeleteMessageId.value = null
   sendError.value = ''
   const result = await messagesStore.deleteMessage(msg.id)
   if (!result.success) {
     sendError.value = result.message
     return
   }
-
   messagesStore.replaceMessage(canalId.value, result.message)
 }
 
@@ -693,13 +820,19 @@ async function sendMessage() {
   if (!canSend.value) return
   sending.value = true
   sendError.value = ''
+  uploadingFile.value = false
+  uploadProgress.value = 0
 
   let fileUrl = null
   let fileName = null
 
   // Upload file first if present
   if (pendingFile.value) {
-    const uploadResult = await messagesStore.uploadFile(pendingFile.value)
+    uploadingFile.value = true
+    const uploadResult = await messagesStore.uploadFile(pendingFile.value, (progress) => {
+      uploadProgress.value = progress
+    })
+    uploadingFile.value = false
     if (!uploadResult.success) {
       sendError.value = uploadResult.message
       sending.value = false
@@ -746,6 +879,7 @@ async function sendMessage() {
 
   messageText.value = ''
   removePendingFile()
+  uploadProgress.value = 0
   if (textInput.value) {
     textInput.value.style.height = 'auto'
   }
@@ -815,6 +949,30 @@ function handleOutsideClick(event) {
   }
   if (!event.target.closest('.reaction-picker-wrapper')) {
     reactionPickerMessageId.value = null
+    reactionPickerAbove.value = false
+  }
+  if (!event.target.closest('.mobile-msg-menu-wrapper')) {
+    mobileMenuMessageId.value = null
+  }
+  if (!event.target.closest('.message-inline-actions')) {
+    confirmDeleteMessageId.value = null
+  }
+}
+
+function handleGlobalKeydown(event) {
+  // Ctrl/Cmd+F → toggle search
+  if ((event.ctrlKey || event.metaKey) && event.key === 'f' && !event.target.matches('input, textarea')) {
+    event.preventDefault()
+    toggleSearch()
+  }
+  // Escape → close search or mobile menus
+  if (event.key === 'Escape') {
+    if (showSearch.value) {
+      showSearch.value = false
+      searchQuery.value = ''
+    }
+    mobileMenuMessageId.value = null
+    confirmDeleteMessageId.value = null
   }
 }
 
@@ -829,7 +987,12 @@ function syncQueryState() {
 async function initChannel(id) {
   if (!id) return
   cancelEditing()
+  clearTypingUsers()
+  uploadProgress.value = 0
+  uploadingFile.value = false
   reactionPickerMessageId.value = null
+  confirmDeleteMessageId.value = null
+  mobileMenuMessageId.value = null
   syncQueryState()
   channelsStore.setActiveChannel(id)
   const loadedMessages = await messagesStore.fetchMessages(id)
@@ -851,6 +1014,8 @@ async function initChannel(id) {
       scrollToBottom(true)
     }
   })
+
+  subscribeToTyping(id, handleTypingEvent)
 }
 
 watch(() => route.params.id, async (newId, oldId) => {
@@ -859,6 +1024,7 @@ watch(() => route.params.id, async (newId, oldId) => {
     const previousId = Number(oldId)
     if (Number.isInteger(previousId) && previousId > 0 && previousId !== nextId) {
       unsubscribe(previousId)
+      unsubscribeTyping(previousId)
     }
     await initChannel(Number.isInteger(nextId) && nextId > 0 ? nextId : null)
   }
@@ -895,12 +1061,16 @@ onMounted(async () => {
   await connect(authStore.token)
   await initChannel(canalId.value)
   document.addEventListener('click', handleOutsideClick)
+  document.addEventListener('keydown', handleGlobalKeydown)
 })
 
 onUnmounted(() => {
   unsubscribe(canalId.value)
+  unsubscribeTyping(canalId.value)
+  clearTypingUsers()
   channelsStore.setActiveChannel(null)
   document.removeEventListener('click', handleOutsideClick)
+  document.removeEventListener('keydown', handleGlobalKeydown)
 })
 </script>
 
@@ -980,6 +1150,11 @@ onUnmounted(() => {
   color: var(--text-light);
 }
 
+.member-count-typing {
+  color: var(--primary);
+  font-weight: 600;
+}
+
 .header-right {
   display: flex;
   align-items: center;
@@ -1003,6 +1178,11 @@ onUnmounted(() => {
 .header-btn:hover {
   background: var(--content-bg);
   color: var(--text);
+}
+
+.header-btn-active {
+  background: var(--primary-light);
+  color: var(--primary);
 }
 
 .export-wrapper {
@@ -1050,6 +1230,21 @@ onUnmounted(() => {
   background: var(--content-bg);
 }
 
+/* Search slide transition */
+.search-slide-enter-active,
+.search-slide-leave-active {
+  transition: max-height 0.2s ease, opacity 0.2s ease, padding 0.2s ease;
+  overflow: hidden;
+}
+
+.search-slide-enter-from,
+.search-slide-leave-to {
+  max-height: 0 !important;
+  opacity: 0;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
 .chat-toolbar {
   display: flex;
   align-items: center;
@@ -1059,6 +1254,7 @@ onUnmounted(() => {
   background: var(--white);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  max-height: 80px;
 }
 
 .chat-search {
@@ -1159,6 +1355,40 @@ onUnmounted(() => {
   color: #c53030;
   font-size: 13px;
   font-weight: 600;
+}
+
+.upload-status {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  background: rgba(232, 80, 26, 0.06);
+  border: 1px solid rgba(232, 80, 26, 0.12);
+  border-radius: var(--radius);
+}
+
+.upload-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.upload-progress-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(15, 23, 42, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.upload-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), #f97316);
+  border-radius: inherit;
+  transition: width 0.2s ease;
 }
 
 .day-separator {
@@ -1386,6 +1616,64 @@ onUnmounted(() => {
   color: var(--danger);
 }
 
+.confirm-delete-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--danger);
+}
+
+/* Desktop actions shown inline; mobile ⋮ menu hidden on desktop */
+.desktop-msg-actions {
+  display: contents;
+}
+
+.mobile-msg-menu-wrapper {
+  display: none;
+  position: relative;
+}
+
+.mobile-menu-btn {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.mobile-msg-menu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  right: 0;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  z-index: 50;
+  min-width: 140px;
+  overflow: hidden;
+}
+
+.mobile-msg-menu button {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.mobile-msg-menu button:hover {
+  background: var(--content-bg);
+}
+
+.mobile-msg-menu button.danger {
+  color: var(--danger);
+}
+
 .message-edit-box {
   display: flex;
   flex-direction: column;
@@ -1512,6 +1800,11 @@ onUnmounted(() => {
   border: 1px solid var(--border);
   box-shadow: var(--shadow-md);
   z-index: 30;
+}
+
+.reaction-picker.reaction-picker-above {
+  top: auto;
+  bottom: calc(100% + 8px);
 }
 
 .reaction-picker-btn {
@@ -1794,9 +2087,7 @@ onUnmounted(() => {
   }
 
   .chat-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 10px 12px;
+    padding: 8px 12px;
   }
 
   .message {
@@ -1815,7 +2106,15 @@ onUnmounted(() => {
   .message-inline-actions {
     opacity: 1;
     pointer-events: auto;
-    flex-wrap: wrap;
+  }
+
+  /* On mobile: hide text action buttons, show ⋮ menu instead */
+  .desktop-msg-actions {
+    display: none;
+  }
+
+  .mobile-msg-menu-wrapper {
+    display: block;
   }
 
   .reaction-picker {

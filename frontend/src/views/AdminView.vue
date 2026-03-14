@@ -776,6 +776,7 @@ import NotificationPanel from '../components/NotificationPanel.vue'
 import api from '../api/axios.js'
 import { useChannelsStore } from '../stores/channels.js'
 import { useAuthStore } from '../stores/auth.js'
+import { getAvatarColor } from '../utils/avatar.js'
 
 const authStore = useAuthStore()
 const channelsStore = useChannelsStore()
@@ -954,20 +955,6 @@ const availableChannelUsers = computed(() => {
     .filter((user) => user.actif && !memberIds.has(user.id))
     .sort((a, b) => `${a.prenom} ${a.nom}`.localeCompare(`${b.prenom} ${b.nom}`, 'fr'))
 })
-
-const AVATAR_COLORS = [
-  '#E8501A', '#4299e1', '#48bb78', '#ed8936', '#9f7aea',
-  '#ed64a6', '#38b2ac', '#667eea', '#fc8181', '#68d391'
-]
-
-function getAvatarColor(user) {
-  const str = `${user.prenom || ''}${user.nom || ''}`
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
-}
 
 function getRoleClass(role) {
   const map = {

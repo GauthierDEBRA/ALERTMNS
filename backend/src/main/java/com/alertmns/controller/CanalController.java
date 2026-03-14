@@ -229,7 +229,8 @@ public class CanalController {
                 .nom(canal.getNom())
                 .estPrive(canal.getEstPrive())
                 .typeCanal(canal.getTypeCanal())
-                .membresCount(canal.getMembresCount());
+                .membresCount(canal.getMembresCount())
+                .lastMessageAt(canal.getLastMessageAt());
 
         if (requesterId != null && "direct".equalsIgnoreCase(canal.getTypeCanal())) {
             Utilisateur directPeer = canalService.getDirectPeer(canal.getIdCanal(), requesterId);

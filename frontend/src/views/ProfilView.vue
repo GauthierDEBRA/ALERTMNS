@@ -32,7 +32,7 @@
                 ref="avatarInputRef"
                 type="file"
                 class="sr-only"
-                accept="image/*"
+                accept=".png,.jpg,.jpeg,.webp,.gif,image/png,image/jpeg,image/webp,image/gif"
                 @change="handleAvatarSelected"
               />
               <button class="btn btn-secondary btn-compact" @click="triggerAvatarPicker" :disabled="uploadingAvatar">
@@ -469,6 +469,7 @@
 import { computed, onMounted, ref } from 'vue'
 import NotificationPanel from '../components/NotificationPanel.vue'
 import { useAuthStore } from '../stores/auth.js'
+import { getAvatarColor } from '../utils/avatar.js'
 import api from '../api/axios.js'
 
 const authStore = useAuthStore()
@@ -511,20 +512,10 @@ const statsError = ref('')
 const historyError = ref('')
 const historySearch = ref('')
 const historyFilter = ref('all')
+const ALLOWED_AVATAR_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif'])
+const ALLOWED_AVATAR_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif'])
 
-const AVATAR_COLORS = [
-  '#E8501A', '#4299e1', '#48bb78', '#ed8936', '#9f7aea',
-  '#ed64a6', '#38b2ac', '#667eea', '#fc8181', '#68d391'
-]
-
-const avatarColor = computed(() => {
-  const str = `${authStore.user?.prenom || ''}${authStore.user?.nom || ''}`
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
-})
+const avatarColor = computed(() => getAvatarColor(authStore.user || {}))
 
 const hasAvatar = computed(() => Boolean(authStore.user?.avatarUrl))
 
@@ -691,8 +682,12 @@ async function handleAvatarSelected(event) {
     return
   }
 
-  if (!String(file.type || '').startsWith('image/')) {
-    avatarError.value = 'Le fichier sélectionné doit être une image.'
+  const extension = String(file.name || '').split('.').pop()?.toLowerCase() || ''
+  const type = String(file.type || '').toLowerCase()
+  const looksAllowed = ALLOWED_AVATAR_TYPES.has(type) || ALLOWED_AVATAR_EXTENSIONS.has(extension)
+
+  if (!looksAllowed) {
+    avatarError.value = 'Formats acceptés : PNG, JPG, WEBP ou GIF.'
     event.target.value = ''
     return
   }
@@ -710,7 +705,13 @@ async function handleAvatarSelected(event) {
     avatarSuccess.value = 'Photo de profil mise à jour !'
     setTimeout(() => { avatarSuccess.value = '' }, 3000)
   } catch (error) {
-    avatarError.value = error.response?.data?.message || 'Erreur lors de l\'upload de la photo'
+    if (error.response?.status === 413) {
+      avatarError.value = 'L\'image est trop volumineuse. Maximum 5 Mo.'
+    } else if (error.response?.status === 429) {
+      avatarError.value = error.response?.data?.message || 'Trop de tentatives d\'upload. Réessaie dans quelques minutes.'
+    } else {
+      avatarError.value = error.response?.data?.message || 'Erreur lors de l\'upload de la photo'
+    }
   } finally {
     uploadingAvatar.value = false
     event.target.value = ''
@@ -1054,9 +1055,9 @@ onMounted(async () => {
 
 .profile-chip.chip-success,
 .activity-status.chip-success {
-  background: rgba(72, 187, 120, 0.14);
-  color: #2f855a;
-  border-color: rgba(72, 187, 120, 0.2);
+  background: rgba(72, 187, 120, 0.18);
+  color: #68d391;
+  border-color: rgba(72, 187, 120, 0.3);
 }
 
 .profile-chip.chip-muted {

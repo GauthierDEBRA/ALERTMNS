@@ -34,6 +34,9 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     @Query("SELECT COUNT(m) FROM Message m WHERE m.canal.idCanal = :canalId AND m.idMessage > :lastReadId")
     Long countUnreadMessages(@Param("canalId") Long canalId, @Param("lastReadId") Long lastReadId);
 
+    @Query("SELECT m.canal.idCanal, MAX(m.dateEnvoi) FROM Message m WHERE m.canal.idCanal IN :canalIds GROUP BY m.canal.idCanal")
+    List<Object[]> findLastMessageDates(@Param("canalIds") List<Long> canalIds);
+
     @Query("SELECT DISTINCT m FROM Message m " +
             "JOIN FETCH m.utilisateur " +
             "JOIN FETCH m.canal c " +

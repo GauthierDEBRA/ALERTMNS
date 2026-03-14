@@ -4,7 +4,7 @@ import api from '../api/axios.js'
 function buildDisplayName(channel) {
   if ((channel.typeCanal ?? 'canal') === 'direct') {
     const fullName = [channel.directUserPrenom, channel.directUserNom].filter(Boolean).join(' ').trim()
-    return fullName || channel.directUserEmail || 'Conversation privee'
+    return fullName || channel.directUserEmail || 'Conversation privée'
   }
 
   return (channel.nom || 'canal').replace(/^#/, '')
@@ -18,6 +18,7 @@ function normalizeChannel(channel) {
     estPrive: channel.estPrive ?? false,
     typeCanal: channel.typeCanal ?? 'canal',
     membresCount: channel.membresCount ?? channel.membersCount ?? 0,
+    lastMessageAt: channel.lastMessageAt ?? null,
     directUserId: channel.directUserId ?? null,
     directUserNom: channel.directUserNom ?? '',
     directUserPrenom: channel.directUserPrenom ?? '',
@@ -53,7 +54,14 @@ export const useChannelsStore = defineStore('channels', {
       return [...this.groupChannels].sort((a, b) => a.displayName.localeCompare(b.displayName, 'fr'))
     },
     sortedDirectChannels() {
-      return [...this.directChannels].sort((a, b) => a.displayName.localeCompare(b.displayName, 'fr'))
+      return [...this.directChannels].sort((a, b) => {
+        const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0
+        const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0
+        if (aTime !== bTime) {
+          return bTime - aTime
+        }
+        return a.displayName.localeCompare(b.displayName, 'fr')
+      })
     }
   },
 
@@ -158,6 +166,17 @@ export const useChannelsStore = defineStore('channels', {
 
     setActiveChannel(id) {
       this.activeChannelId = id
+    },
+
+    touchChannelActivity(id, dateTime = null) {
+      const index = this.channels.findIndex(channel => channel.id === id)
+      if (index === -1) return
+
+      const updatedChannel = {
+        ...this.channels[index],
+        lastMessageAt: dateTime || new Date().toISOString()
+      }
+      this.channels.splice(index, 1, updatedChannel)
     },
 
     removeChannel(id) {
