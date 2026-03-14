@@ -50,6 +50,10 @@
           <p class="checkin-hint">
             {{ isPresent ? 'Cliquez pour enregistrer votre départ' : 'Cliquez pour enregistrer votre arrivée' }}
           </p>
+
+          <p v-if="pointageError" class="checkin-error">
+            {{ pointageError }}
+          </p>
         </div>
       </div>
 
@@ -69,7 +73,7 @@
             </div>
             <div class="stat-value">{{ stats.dailyFormatted || '0h 00min' }}</div>
             <div class="stat-bar">
-              <div class="stat-bar-fill" :style="{ width: Math.min((stats.dailyMinutes || 0) / 480 * 100, 100) + '%' }"></div>
+              <div class="stat-bar-fill" :style="{ width: Math.max(0, Math.min((stats.dailyMinutes || 0) / 480 * 100, 100)) + '%' }"></div>
             </div>
             <div class="stat-target">Objectif: 8h</div>
           </div>
@@ -88,7 +92,7 @@
             </div>
             <div class="stat-value">{{ stats.weeklyFormatted || '0h 00min' }}</div>
             <div class="stat-bar">
-              <div class="stat-bar-fill week-bar" :style="{ width: Math.min((stats.weeklyMinutes || 0) / 2400 * 100, 100) + '%' }"></div>
+              <div class="stat-bar-fill week-bar" :style="{ width: Math.max(0, Math.min((stats.weeklyMinutes || 0) / 2400 * 100, 100)) + '%' }"></div>
             </div>
             <div class="stat-target">Objectif: 40h</div>
           </div>
@@ -104,7 +108,7 @@
             </div>
             <div class="stat-value">{{ stats.monthlyFormatted || '0h 00min' }}</div>
             <div class="stat-bar">
-              <div class="stat-bar-fill month-bar" :style="{ width: Math.min((stats.monthlyMinutes || 0) / 10400 * 100, 100) + '%' }"></div>
+              <div class="stat-bar-fill month-bar" :style="{ width: Math.max(0, Math.min((stats.monthlyMinutes || 0) / 10380 * 100, 100)) + '%' }"></div>
             </div>
             <div class="stat-target">Objectif: ~173h</div>
           </div>
@@ -134,7 +138,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="user in presentUsers" :key="user.id">
+              <tr v-for="user in presentUsers" :key="user.idUser">
                 <td>
                   <div class="user-cell">
                     <div class="user-cell-avatar" :style="{ background: getAvatarColor(user) }">
@@ -180,6 +184,7 @@ const authStore = useAuthStore()
 const isPresent = ref(false)
 const loading = ref(false)
 const arrivalTime = ref('')
+const pointageError = ref('')
 const stats = ref({
   dailyMinutes: 0,
   weeklyMinutes: 0,
@@ -216,16 +221,35 @@ function getRoleClass(role) {
   const map = {
     'Admin': 'role-admin',
     'RH': 'role-rh',
-    'Employe': 'role-employe',
-    'Manager': 'role-manager'
+    'Collaborateur': 'role-employe',
+    'Responsable': 'role-manager'
   }
   return map[role] || 'role-employe'
+}
+
+function formatArrivalTime(dateTime) {
+  if (!dateTime || typeof dateTime !== 'string') return ''
+
+  const timePart = dateTime.split('T')[1]
+  return timePart ? timePart.slice(0, 5) : ''
+}
+
+function syncPresenceFromStats(statsData) {
+  isPresent.value = Boolean(statsData?.isCurrentlyPresent)
+  arrivalTime.value = isPresent.value ? formatArrivalTime(statsData?.arrivedAt) : ''
 }
 
 async function fetchStats() {
   try {
     const res = await api.get('/pointage/stats')
-    stats.value = res.data
+    const data = res.data || {}
+    // Guard against negative values that can come from the API when the session
+    // is still open (endedAt missing). Clamp to zero so the UI stays sensible.
+    if ((data.dailyMinutes || 0) < 0) { data.dailyMinutes = 0; data.dailyFormatted = '0h 00min' }
+    if ((data.weeklyMinutes || 0) < 0) { data.weeklyMinutes = 0; data.weeklyFormatted = '0h 00min' }
+    if ((data.monthlyMinutes || 0) < 0) { data.monthlyMinutes = 0; data.monthlyFormatted = '0h 00min' }
+    stats.value = data
+    syncPresenceFromStats(data)
   } catch (e) {
     console.error('Error fetching stats:', e)
   }
@@ -235,7 +259,7 @@ async function fetchPresent() {
   try {
     const res = await api.get('/pointage/presents')
     presentUsers.value = res.data || []
-    isPresent.value = presentUsers.value.some(u => u.id === authStore.user?.id)
+    isPresent.value = presentUsers.value.some(u => u.idUser === authStore.user?.id)
   } catch (e) {
     console.error('Error fetching present users:', e)
   }
@@ -243,19 +267,17 @@ async function fetchPresent() {
 
 async function togglePointage() {
   loading.value = true
+  pointageError.value = ''
   try {
     if (isPresent.value) {
       await api.post('/pointage/partir')
-      isPresent.value = false
     } else {
       await api.post('/pointage/arriver')
-      isPresent.value = true
-      arrivalTime.value = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
     }
-    await fetchPresent()
-    await fetchStats()
+    await Promise.all([fetchPresent(), fetchStats()])
   } catch (e) {
     console.error('Pointage error:', e)
+    pointageError.value = e.response?.data?.message || 'Impossible de mettre a jour le pointage'
   } finally {
     loading.value = false
   }
@@ -337,6 +359,13 @@ onUnmounted(() => {
   border: 2px solid var(--border);
   text-align: center;
   transition: var(--transition);
+}
+
+.checkin-error {
+  margin-top: 12px;
+  color: #c53030;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .checkin-card.is-present {

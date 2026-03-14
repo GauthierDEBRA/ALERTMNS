@@ -18,10 +18,17 @@ public class Canal {
     @Column(name = "id_canal")
     private Long idCanal;
 
-    @Column(name = "nom", nullable = false, length = 150)
+    @Column(name = "nom", nullable = false, unique = true, length = 150)
     private String nom;
 
     @Column(name = "est_prive")
     @Builder.Default
     private Boolean estPrive = false;
+
+    @Column(name = "type_canal", nullable = false, length = 30)
+    @Builder.Default
+    private String typeCanal = "canal";
+
+    @Transient
+    private Long membresCount;
 }

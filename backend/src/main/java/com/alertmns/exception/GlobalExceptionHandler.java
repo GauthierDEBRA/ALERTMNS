@@ -2,6 +2,7 @@ package com.alertmns.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -23,6 +24,13 @@ public class GlobalExceptionHandler {
         body.put("message", "Données invalides");
         body.put("erreurs", erreurs);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler({AccessDeniedException.class, SecurityException.class})
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(RuntimeException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("message", ex instanceof AccessDeniedException ? "Accès refusé" : (ex.getMessage() != null ? ex.getMessage() : "Accès refusé"));
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
 
     @ExceptionHandler(RuntimeException.class)

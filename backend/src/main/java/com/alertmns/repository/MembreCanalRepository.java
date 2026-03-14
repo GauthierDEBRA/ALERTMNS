@@ -23,4 +23,8 @@ public interface MembreCanalRepository extends JpaRepository<MembreCanal, Membre
     List<MembreCanal> findByCanalId(@Param("canalId") Long canalId);
 
     boolean existsByIdIdUserAndIdIdCanal(Long userId, Long canalId);
+
+    long countByIdIdCanal(Long canalId);
+
+    long countByIdIdCanalAndRole(Long canalId, String role);
 }

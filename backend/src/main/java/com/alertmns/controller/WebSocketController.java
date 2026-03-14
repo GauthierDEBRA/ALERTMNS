@@ -23,31 +23,30 @@ public class WebSocketController {
 
     @MessageMapping("/chat.sendMessage/{canalId}")
     public void sendMessage(@DestinationVariable Long canalId,
-                             @Payload MessageDto messageDto,
-                             SimpMessageHeaderAccessor headerAccessor) {
+                            @Payload MessageDto messageDto,
+                            SimpMessageHeaderAccessor headerAccessor) {
         try {
             Principal user = headerAccessor.getUser();
             if (user == null) return;
 
             Long userId = utilisateurService.getUserByEmail(user.getName()).getIdUser();
-            MessageDto saved = messageService.sendMessage(canalId, userId, messageDto.getContenu());
-
-            // Already broadcast inside messageService.sendMessage via SimpMessagingTemplate
+            messageService.sendMessage(canalId, userId, messageDto.getContenu());
         } catch (Exception e) {
-            // Log error
+            // ignore
         }
     }
 
     @MessageMapping("/chat.typing/{canalId}")
     public void typing(@DestinationVariable Long canalId,
-                        SimpMessageHeaderAccessor headerAccessor) {
+                       SimpMessageHeaderAccessor headerAccessor) {
         Principal user = headerAccessor.getUser();
         if (user == null) return;
 
         try {
-            String email = user.getName();
+            Long userId = utilisateurService.getUserByEmail(user.getName()).getIdUser();
+            messageService.assertUserCanAccessCanal(canalId, userId);
             messagingTemplate.convertAndSend("/topic/canal/" + canalId + "/typing",
-                    java.util.Map.of("email", email));
+                    java.util.Map.of("email", user.getName()));
         } catch (Exception e) {
             // ignore
         }

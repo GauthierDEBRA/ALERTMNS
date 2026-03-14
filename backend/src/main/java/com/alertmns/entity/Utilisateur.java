@@ -42,6 +42,21 @@ public class Utilisateur {
     @Builder.Default
     private Boolean isActive = true;
 
+    @Column(name = "avatar_url", length = 255)
+    private String avatarUrl;
+
+    @Column(name = "notif_reunion", nullable = false)
+    @Builder.Default
+    private Boolean notifyReunions = true;
+
+    @Column(name = "notif_message", nullable = false)
+    @Builder.Default
+    private Boolean notifyMessages = true;
+
+    @Column(name = "notif_absence", nullable = false)
+    @Builder.Default
+    private Boolean notifyAbsences = true;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_structure")
     private Structure structure;

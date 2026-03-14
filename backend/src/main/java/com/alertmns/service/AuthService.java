@@ -16,9 +16,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Set;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+    private static final Set<String> ALLOWED_ROLES = Set.of("Admin", "RH", "Responsable", "Collaborateur");
 
     private final UtilisateurRepository utilisateurRepository;
     private final StructureRepository structureRepository;
@@ -48,6 +52,10 @@ public class AuthService {
                 .structureNom(utilisateur.getStructure() != null ? utilisateur.getStructure().getNom() : null)
                 .msgAbsence(utilisateur.getMsgAbsence())
                 .isActive(utilisateur.getIsActive())
+                .avatarUrl(utilisateur.getAvatarUrl())
+                .notifyReunions(utilisateur.getNotifyReunions())
+                .notifyMessages(utilisateur.getNotifyMessages())
+                .notifyAbsences(utilisateur.getNotifyAbsences())
                 .build();
     }
 
@@ -63,9 +71,7 @@ public class AuthService {
                     .orElseThrow(() -> new RuntimeException("Structure non trouvée"));
         }
 
-        String role = (request.getRole() != null && !request.getRole().isBlank())
-                ? request.getRole()
-                : "Collaborateur";
+        String role = normalizeRole(request.getRole());
 
         Utilisateur utilisateur = Utilisateur.builder()
                 .nom(request.getNom())
@@ -91,6 +97,18 @@ public class AuthService {
                 .structureId(structure != null ? structure.getIdStructure() : null)
                 .structureNom(structure != null ? structure.getNom() : null)
                 .isActive(true)
+                .avatarUrl(utilisateur.getAvatarUrl())
+                .notifyReunions(utilisateur.getNotifyReunions())
+                .notifyMessages(utilisateur.getNotifyMessages())
+                .notifyAbsences(utilisateur.getNotifyAbsences())
                 .build();
+    }
+
+    private String normalizeRole(String role) {
+        String normalized = (role == null || role.isBlank()) ? "Collaborateur" : role.trim();
+        if (!ALLOWED_ROLES.contains(normalized)) {
+            throw new RuntimeException("Rôle invalide");
+        }
+        return normalized;
     }
 }

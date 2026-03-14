@@ -16,4 +16,6 @@ public interface ParticipantReunionRepository extends JpaRepository<ParticipantR
     List<ParticipantReunion> findByIdIdUser(Long userId);
 
     Optional<ParticipantReunion> findByIdIdReunionAndIdIdUser(Long reunionId, Long userId);
+
+    boolean existsByIdIdReunionAndIdIdUser(Long reunionId, Long userId);
 }

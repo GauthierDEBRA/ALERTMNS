@@ -3,10 +3,23 @@
     <!-- Chat header -->
     <div class="chat-header">
       <div class="header-left">
-        <span class="channel-hash">#</span>
+        <template v-if="isDirectChannel">
+          <div class="direct-header-avatar" :style="{ background: directAvatarColor }">
+            <img
+              v-if="channel?.directUserAvatarUrl"
+              :src="channel.directUserAvatarUrl"
+              :alt="channelDisplayName"
+              class="direct-header-avatar-image"
+            />
+            <template v-else>
+              {{ directInitials }}
+            </template>
+          </div>
+        </template>
+        <span v-else class="channel-hash">#</span>
         <div class="channel-info">
-          <h2 class="channel-name">{{ channel?.nom || 'Canal' }}</h2>
-          <span class="member-count">{{ memberCount }} membre{{ memberCount !== 1 ? 's' : '' }}</span>
+          <h2 class="channel-name">{{ channelDisplayName }}</h2>
+          <span class="member-count">{{ channelSubtitle }}</span>
         </div>
       </div>
 
@@ -52,6 +65,25 @@
       </div>
     </div>
 
+    <div class="chat-toolbar">
+      <div class="chat-search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input
+          v-model="searchQuery"
+          type="text"
+          class="chat-search-input"
+          placeholder="Rechercher dans cette conversation"
+        />
+        <button v-if="searchQuery" class="chat-search-clear" @click="clearSearch">Effacer</button>
+      </div>
+      <span v-if="searchQuery.trim()" class="search-count">
+        {{ filteredMessages.length }} résultat{{ filteredMessages.length > 1 ? 's' : '' }}
+      </span>
+    </div>
+
     <div class="chat-body">
       <!-- Messages area -->
       <div class="messages-area" ref="messagesContainer">
@@ -61,9 +93,15 @@
         </div>
 
         <div v-else-if="messages.length === 0" class="messages-empty">
-          <div class="empty-channel-icon">#</div>
-          <h3>Bienvenue dans #{{ channel?.nom }}</h3>
-          <p>C'est le début de ce canal. Envoyez le premier message !</p>
+          <div class="empty-channel-icon">{{ isDirectChannel ? '@' : '#' }}</div>
+          <h3>{{ isDirectChannel ? `Conversation avec ${channelDisplayName}` : `Bienvenue dans #${channelDisplayName}` }}</h3>
+          <p>{{ isDirectChannel ? 'Dites bonjour pour lancer la conversation privee.' : "C'est le debut de ce canal. Envoyez le premier message !" }}</p>
+        </div>
+
+        <div v-else-if="filteredMessages.length === 0" class="messages-empty">
+          <div class="empty-channel-icon">?</div>
+          <h3>Aucun résultat</h3>
+          <p>Essaie avec un autre mot-clé dans cette conversation.</p>
         </div>
 
         <template v-else>
@@ -90,8 +128,11 @@
               class="message"
               :class="{
                 'message-own': isOwnMessage(group.msg),
-                'message-grouped': !group.showHeader
+                'message-grouped': !group.showHeader,
+                'message-group-start': group.showHeader,
+                'message-highlighted': highlightedMessageId === group.msg.id
               }"
+              :data-message-id="group.msg.id"
             >
               <!-- Avatar / spacer -->
               <div class="message-avatar-col">
@@ -100,7 +141,15 @@
                   class="message-avatar"
                   :style="{ background: getAvatarColor(group.msg) }"
                 >
-                  {{ getMsgInitials(group.msg) }}
+                  <img
+                    v-if="group.msg.auteurAvatarUrl"
+                    :src="group.msg.auteurAvatarUrl"
+                    :alt="getMsgFullName(group.msg)"
+                    class="message-avatar-image"
+                  />
+                  <template v-else>
+                    {{ getMsgInitials(group.msg) }}
+                  </template>
                 </div>
                 <div v-else class="message-avatar-placeholder">
                   <span class="message-time-hover">{{ formatTimeOnly(group.msg.dateEnvoi || group.msg.createdAt) }}</span>
@@ -111,7 +160,10 @@
               <div class="message-content">
                 <div v-if="group.showHeader" class="message-header">
                   <span class="message-author">{{ getMsgFullName(group.msg) }}</span>
-                  <span class="message-time">{{ formatDate(group.msg.dateEnvoi || group.msg.createdAt) }}</span>
+                  <div class="message-meta">
+                    <span class="message-time">{{ formatDate(group.msg.dateEnvoi || group.msg.createdAt) }}</span>
+                    <span v-if="group.msg.dateModification && !group.msg.isDeleted" class="message-edited-badge">modifié</span>
+                  </div>
                 </div>
 
                 <!-- Absence banner -->
@@ -124,11 +176,38 @@
                   {{ group.msg.msgAbsence }}
                 </div>
 
-                <!-- Text content -->
-                <div v-if="group.msg.contenu" class="message-text">{{ group.msg.contenu }}</div>
+                <div v-if="editingMessageId === group.msg.id" class="message-edit-box">
+                  <textarea
+                    v-model="editingText"
+                    class="message-edit-input"
+                    rows="3"
+                    placeholder="Modifier le message"
+                  ></textarea>
+                  <div class="message-edit-actions">
+                    <button class="btn btn-secondary btn-sm" @click="cancelEditing">Annuler</button>
+                    <button
+                      class="btn btn-primary btn-sm"
+                      @click="saveEdit(group.msg)"
+                      :disabled="editingBusy || !editingText.trim()"
+                    >
+                      {{ editingBusy ? 'Enregistrement...' : 'Enregistrer' }}
+                    </button>
+                  </div>
+                </div>
+
+                <template v-else>
+                  <div v-if="group.msg.contenu" class="message-text" :class="{ 'message-text-deleted': group.msg.isDeleted }">
+                    {{ group.msg.contenu }}
+                  </div>
+
+                  <div v-if="canManageMessage(group.msg)" class="message-inline-actions">
+                    <button class="message-action-btn" @click="startEditing(group.msg)">Modifier</button>
+                    <button class="message-action-btn danger" @click="removeMessage(group.msg)">Supprimer</button>
+                  </div>
+                </template>
 
                 <!-- File attachment -->
-                <div v-if="group.msg.pieceJointeUrl" class="message-attachment">
+                <div v-if="group.msg.pieceJointeUrl && !group.msg.isDeleted" class="message-attachment">
                   <a
                     :href="group.msg.pieceJointeUrl"
                     target="_blank"
@@ -142,6 +221,42 @@
                     </div>
                     <span>{{ group.msg.pieceJointeNom || 'Pièce jointe' }}</span>
                   </a>
+                </div>
+
+                <div v-if="!group.msg.isDeleted" class="message-reactions">
+                  <button
+                    v-for="reaction in group.msg.reactions || []"
+                    :key="`${group.msg.id}-${reaction.emoji}`"
+                    class="reaction-chip"
+                    :class="{ 'reaction-chip-active': hasReacted(reaction) }"
+                    @click="toggleReaction(group.msg, reaction.emoji)"
+                    :disabled="reactionBusyMessageId === group.msg.id"
+                  >
+                    <span class="reaction-chip-emoji">{{ reaction.emoji }}</span>
+                    <span class="reaction-chip-count">{{ reaction.count }}</span>
+                  </button>
+
+                  <div class="reaction-picker-wrapper">
+                    <button
+                      class="reaction-add-btn"
+                      :class="{ 'reaction-add-btn-active': reactionPickerMessageId === group.msg.id }"
+                      @click="toggleReactionPicker(group.msg.id)"
+                      :disabled="reactionBusyMessageId === group.msg.id"
+                    >
+                      +
+                    </button>
+
+                    <div v-if="reactionPickerMessageId === group.msg.id" class="reaction-picker">
+                      <button
+                        v-for="emoji in AVAILABLE_REACTIONS"
+                        :key="`${group.msg.id}-${emoji}`"
+                        class="reaction-picker-btn"
+                        @click="toggleReaction(group.msg, emoji)"
+                      >
+                        {{ emoji }}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -159,7 +274,15 @@
           <div class="members-list">
             <div v-for="member in members" :key="member.id" class="member-item">
               <div class="member-avatar" :style="{ background: getAvatarColorById(member) }">
-                {{ `${member.prenom?.[0] || ''}${member.nom?.[0] || ''}`.toUpperCase() }}
+                <img
+                  v-if="member.avatarUrl"
+                  :src="member.avatarUrl"
+                  :alt="`${member.prenom} ${member.nom}`"
+                  class="member-avatar-image"
+                />
+                <template v-else>
+                  {{ `${member.prenom?.[0] || ''}${member.nom?.[0] || ''}`.toUpperCase() }}
+                </template>
               </div>
               <div class="member-info">
                 <span class="member-name">{{ member.prenom }} {{ member.nom }}</span>
@@ -167,7 +290,7 @@
               </div>
             </div>
           </div>
-          <div class="members-footer">
+          <div v-if="!isDirectChannel && authStore.isAdmin" class="members-footer">
             <button class="btn btn-secondary btn-sm" @click="showAddMember = true">
               + Ajouter un membre
             </button>
@@ -179,6 +302,10 @@
     <!-- Message Input -->
     <div class="message-input-area">
       <div class="input-container">
+        <div v-if="sendError" class="send-error">
+          {{ sendError }}
+        </div>
+
         <!-- File preview -->
         <div v-if="pendingFile" class="file-preview">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -207,7 +334,7 @@
             ref="textInput"
             v-model="messageText"
             class="message-textarea"
-            :placeholder="`Envoyer un message dans #${channel?.nom || 'canal'}`"
+            :placeholder="messagePlaceholder"
             @keydown.enter.exact.prevent="sendMessage"
             @keydown.enter.shift.exact="addNewLine"
             @input="autoResize"
@@ -273,7 +400,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useChannelsStore } from '../stores/channels.js'
 import { useMessagesStore } from '../stores/messages.js'
 import { useAuthStore } from '../stores/auth.js'
@@ -283,10 +410,11 @@ import NotificationPanel from '../components/NotificationPanel.vue'
 import api from '../api/axios.js'
 
 const route = useRoute()
+const router = useRouter()
 const channelsStore = useChannelsStore()
 const messagesStore = useMessagesStore()
 const authStore = useAuthStore()
-const { subscribe, unsubscribe, sendMessage: wsSendMessage, connect } = useWebSocket()
+const { subscribe, unsubscribe, connect } = useWebSocket()
 const { formatDate, isSameDay, formatDayHeader } = useDate()
 
 const messagesContainer = ref(null)
@@ -298,6 +426,7 @@ const messageText = ref('')
 const pendingFile = ref(null)
 const pendingFileUrl = ref(null)
 const sending = ref(false)
+const editingBusy = ref(false)
 const showMembers = ref(false)
 const showExport = ref(false)
 const showAddMember = ref(false)
@@ -308,14 +437,56 @@ const allUsers = ref([])
 const selectedUserId = ref('')
 const addingMember = ref(false)
 const addMemberError = ref('')
+const sendError = ref('')
+const searchQuery = ref('')
+const editingMessageId = ref(null)
+const editingText = ref('')
+const reactionPickerMessageId = ref(null)
+const reactionBusyMessageId = ref(null)
+const highlightedMessageId = ref(null)
 
-const canalId = computed(() => Number(route.params.id))
+const canalId = computed(() => {
+  const parsed = Number(route.params.id)
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null
+})
 const channel = computed(() => channelsStore.channels.find(c => c.id === canalId.value))
+const isDirectChannel = computed(() => channel.value?.typeCanal === 'direct')
+const channelDisplayName = computed(() => channel.value?.displayName || 'canal')
+const channelSubtitle = computed(() => {
+  if (isDirectChannel.value) {
+    return channel.value?.directUserEmail || 'Conversation privee'
+  }
+  return `${memberCount.value} membre${memberCount.value !== 1 ? 's' : ''}`
+})
+const messagePlaceholder = computed(() =>
+  isDirectChannel.value
+    ? `Envoyer un message a ${channelDisplayName.value}`
+    : `Envoyer un message dans #${channelDisplayName.value}`
+)
 const messages = computed(() => messagesStore.getMessages(canalId.value))
-const canSend = computed(() => (messageText.value.trim() || pendingFile.value) && !sending.value)
+const filteredMessages = computed(() => {
+  const search = searchQuery.value.trim().toLowerCase()
+  if (!search) {
+    return messages.value
+  }
+
+  return messages.value.filter((msg) => {
+    const content = msg.isDeleted ? '' : (msg.contenu || '')
+    const haystack = `${content} ${msg.auteurPrenom || ''} ${msg.auteurNom || ''}`.toLowerCase()
+    return haystack.includes(search)
+  })
+})
+const canSend = computed(() => Boolean(canalId.value && (messageText.value.trim() || pendingFile.value) && !sending.value))
+const directInitials = computed(() =>
+  `${channel.value?.directUserPrenom?.[0] || ''}${channel.value?.directUserNom?.[0] || ''}`.toUpperCase() || '@'
+)
+const directAvatarColor = computed(() => getAvatarColorById({
+  prenom: channel.value?.directUserPrenom || '',
+  nom: channel.value?.directUserNom || ''
+}))
 
 const availableUsers = computed(() => {
-  const memberIds = new Set(members.value.map(m => m.id))
+  const memberIds = new Set(members.value.map(member => member.userId || member.id))
   return allUsers.value.filter(u => !memberIds.has(u.id))
 })
 
@@ -323,6 +494,7 @@ const AVATAR_COLORS = [
   '#E8501A', '#4299e1', '#48bb78', '#ed8936', '#9f7aea',
   '#ed64a6', '#38b2ac', '#667eea', '#fc8181', '#68d391'
 ]
+const AVAILABLE_REACTIONS = ['👍', '❤️', '😂', '🎉', '✅', '👀']
 
 function getAvatarColor(msg) {
   const str = `${msg.auteurPrenom || ''}${msg.auteurNom || ''}${msg.auteurId || ''}`
@@ -354,6 +526,14 @@ function isOwnMessage(msg) {
   return msg.auteurId === authStore.user?.id
 }
 
+function canManageMessage(msg) {
+  return isOwnMessage(msg) && !msg.isDeleted && editingMessageId.value !== msg.id
+}
+
+function hasReacted(reaction) {
+  return Boolean(reaction?.userIds?.includes(authStore.user?.id))
+}
+
 function formatTimeOnly(dateInput) {
   if (!dateInput) return ''
   return new Date(dateInput).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
@@ -361,7 +541,7 @@ function formatTimeOnly(dateInput) {
 
 // Group messages: show header if different user or >5 min gap, track day separators
 const groupedMessages = computed(() => {
-  const msgs = messages.value
+  const msgs = filteredMessages.value
   if (!msgs.length) return []
 
   const result = []
@@ -412,6 +592,14 @@ async function scrollToBottom(smooth = false) {
   }
 }
 
+async function scrollToMessage(messageId) {
+  await nextTick()
+  if (!messagesContainer.value || !messageId) return
+  const target = messagesContainer.value.querySelector(`[data-message-id="${messageId}"]`)
+  if (!target) return
+  target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
 function autoResize() {
   if (textInput.value) {
     textInput.value.style.height = 'auto'
@@ -437,9 +625,74 @@ function removePendingFile() {
   if (fileInput.value) fileInput.value.value = ''
 }
 
+function clearSearch() {
+  searchQuery.value = ''
+}
+
+function toggleReactionPicker(messageId) {
+  reactionPickerMessageId.value = reactionPickerMessageId.value === messageId ? null : messageId
+}
+
+function startEditing(msg) {
+  editingMessageId.value = msg.id
+  editingText.value = msg.contenu || ''
+  sendError.value = ''
+}
+
+function cancelEditing() {
+  editingMessageId.value = null
+  editingText.value = ''
+}
+
+async function toggleReaction(msg, emoji) {
+  reactionBusyMessageId.value = msg.id
+  sendError.value = ''
+  const result = await messagesStore.toggleReaction(msg.id, emoji)
+  reactionBusyMessageId.value = null
+
+  if (!result.success) {
+    sendError.value = result.message
+    return
+  }
+
+  messagesStore.replaceMessage(canalId.value, result.message)
+  reactionPickerMessageId.value = null
+}
+
+async function saveEdit(msg) {
+  if (!editingText.value.trim()) return
+  editingBusy.value = true
+  sendError.value = ''
+  const result = await messagesStore.updateMessage(msg.id, editingText.value.trim())
+  editingBusy.value = false
+
+  if (!result.success) {
+    sendError.value = result.message
+    return
+  }
+
+  messagesStore.replaceMessage(canalId.value, result.message)
+  cancelEditing()
+}
+
+async function removeMessage(msg) {
+  const confirmed = window.confirm('Supprimer ce message ?')
+  if (!confirmed) return
+
+  sendError.value = ''
+  const result = await messagesStore.deleteMessage(msg.id)
+  if (!result.success) {
+    sendError.value = result.message
+    return
+  }
+
+  messagesStore.replaceMessage(canalId.value, result.message)
+}
+
 async function sendMessage() {
   if (!canSend.value) return
   sending.value = true
+  sendError.value = ''
 
   let fileUrl = null
   let fileName = null
@@ -447,42 +700,48 @@ async function sendMessage() {
   // Upload file first if present
   if (pendingFile.value) {
     const uploadResult = await messagesStore.uploadFile(pendingFile.value)
-    if (uploadResult.success) {
-      fileUrl = uploadResult.url
-      fileName = pendingFile.value.name
+    if (!uploadResult.success) {
+      sendError.value = uploadResult.message
+      sending.value = false
+      return
     }
+    fileUrl = uploadResult.url
+    fileName = pendingFile.value.name
   }
 
   const contenu = messageText.value.trim()
+  const optimisticId = `temp-${Date.now()}`
 
   // Optimistically add message
   const optimisticMsg = {
-    id: `temp-${Date.now()}`,
+    id: optimisticId,
     canalId: canalId.value,
     contenu,
     auteurId: authStore.user?.id,
     auteurNom: authStore.user?.nom,
     auteurPrenom: authStore.user?.prenom,
+    auteurAvatarUrl: authStore.user?.avatarUrl || null,
     dateEnvoi: new Date().toISOString(),
     pieceJointeUrl: fileUrl,
     pieceJointeNom: fileName
   }
   messagesStore.addMessage(optimisticMsg)
 
-  // Send via WebSocket
   try {
-    await wsSendMessage(
-      canalId.value,
-      contenu,
-      authStore.user?.id,
-      authStore.user?.nom,
-      authStore.user?.prenom,
-      fileUrl,
-      fileName
-    )
+    const result = await messagesStore.sendMessage(canalId.value, contenu, fileUrl, fileName)
+    if (!result.success) {
+      messagesStore.removeMessage(canalId.value, optimisticId)
+      sendError.value = result.message
+      return
+    }
+
+    messagesStore.addMessage(result.message)
   } catch (e) {
-    // Fall back to HTTP
-    await messagesStore.sendMessage(canalId.value, contenu, fileUrl, fileName)
+    messagesStore.removeMessage(canalId.value, optimisticId)
+    sendError.value = 'Erreur lors de l\'envoi du message'
+    return
+  } finally {
+    sending.value = false
   }
 
   messageText.value = ''
@@ -490,7 +749,6 @@ async function sendMessage() {
   if (textInput.value) {
     textInput.value.style.height = 'auto'
   }
-  sending.value = false
   await scrollToBottom(true)
 }
 
@@ -515,6 +773,13 @@ async function addMember() {
 }
 
 async function loadMembers() {
+  if (!canalId.value) {
+    members.value = []
+    memberCount.value = 0
+    memberAbsenceMap.value = {}
+    return
+  }
+
   const data = await channelsStore.getChannelMembers(canalId.value)
   members.value = data
   memberCount.value = data.length
@@ -528,9 +793,17 @@ async function loadMembers() {
 }
 
 async function loadAllUsers() {
+  if (!authStore.isAdmin || isDirectChannel.value) {
+    allUsers.value = []
+    return
+  }
+
   try {
     const res = await api.get('/users')
-    allUsers.value = res.data || []
+    allUsers.value = (res.data || []).map(user => ({
+      ...user,
+      id: user.id ?? user.idUser
+    }))
   } catch (e) {
     // Not admin, skip
   }
@@ -540,36 +813,87 @@ function handleOutsideClick(event) {
   if (exportRef.value && !exportRef.value.contains(event.target)) {
     showExport.value = false
   }
+  if (!event.target.closest('.reaction-picker-wrapper')) {
+    reactionPickerMessageId.value = null
+  }
+}
+
+function syncQueryState() {
+  const search = typeof route.query.search === 'string' ? route.query.search : ''
+  searchQuery.value = search
+
+  const messageId = Number(route.query.message)
+  highlightedMessageId.value = Number.isInteger(messageId) && messageId > 0 ? messageId : null
 }
 
 async function initChannel(id) {
+  if (!id) return
+  cancelEditing()
+  reactionPickerMessageId.value = null
+  syncQueryState()
   channelsStore.setActiveChannel(id)
-  await messagesStore.fetchMessages(id)
-  messagesStore.markAsRead(id)
+  const loadedMessages = await messagesStore.fetchMessages(id)
+  const lastMessageId = loadedMessages.at(-1)?.id
+  messagesStore.markAsRead(id, lastMessageId)
   await loadMembers()
-  await scrollToBottom()
+  await loadAllUsers()
+  if (highlightedMessageId.value) {
+    await scrollToMessage(highlightedMessageId.value)
+  } else {
+    await scrollToBottom()
+  }
 
   // Subscribe to WebSocket
   subscribe(id, (msg) => {
+    const alreadyExists = messagesStore.getMessages(id).some(message => message.id === (msg.id ?? msg.idMessage))
     messagesStore.addMessage({ ...msg, canalId: id })
-    scrollToBottom(true)
+    if (!alreadyExists) {
+      scrollToBottom(true)
+    }
   })
 }
 
-watch(() => route.params.id, async (newId) => {
+watch(() => route.params.id, async (newId, oldId) => {
   if (newId) {
-    const oldId = canalId.value
-    if (oldId && oldId !== Number(newId)) {
-      unsubscribe(oldId)
+    const nextId = Number(newId)
+    const previousId = Number(oldId)
+    if (Number.isInteger(previousId) && previousId > 0 && previousId !== nextId) {
+      unsubscribe(previousId)
     }
-    await initChannel(Number(newId))
+    await initChannel(Number.isInteger(nextId) && nextId > 0 ? nextId : null)
   }
 }, { immediate: false })
+
+watch(
+  () => route.query,
+  async () => {
+    syncQueryState()
+    if (highlightedMessageId.value && canalId.value) {
+      await scrollToMessage(highlightedMessageId.value)
+    }
+  },
+  { deep: true }
+)
+
+watch(
+  () => channelsStore.channels,
+  (channels) => {
+    const firstConversation = channelsStore.sortedChannels[0] || channelsStore.sortedDirectChannels[0]
+    if (!canalId.value && firstConversation) {
+      router.replace(`/chat/canal/${firstConversation.id}`)
+      return
+    }
+
+    if (canalId.value && channels.length > 0 && !channel.value && firstConversation) {
+      router.replace(`/chat/canal/${firstConversation.id}`)
+    }
+  },
+  { immediate: true, deep: true }
+)
 
 onMounted(async () => {
   await connect(authStore.token)
   await initChannel(canalId.value)
-  await loadAllUsers()
   document.addEventListener('click', handleOutsideClick)
 })
 
@@ -613,6 +937,27 @@ onUnmounted(() => {
   font-weight: 700;
   color: var(--primary);
   flex-shrink: 0;
+}
+
+.direct-header-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.direct-header-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .channel-info {
@@ -705,6 +1050,71 @@ onUnmounted(() => {
   background: var(--content-bg);
 }
 
+.chat-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.chat-search {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--content-bg);
+  color: var(--text-light);
+}
+
+.chat-search:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.chat-search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.chat-search-input::placeholder {
+  color: #a0aec0;
+}
+
+.chat-search-clear {
+  border: none;
+  background: none;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.chat-search-clear:hover {
+  color: var(--primary-hover);
+}
+
+.search-count {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-light);
+}
+
 .chat-body {
   flex: 1;
   display: flex;
@@ -742,6 +1152,13 @@ onUnmounted(() => {
   font-size: 18px;
   font-weight: 600;
   color: var(--text);
+}
+
+.send-error {
+  margin: 0 0 8px;
+  color: #c53030;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .day-separator {
@@ -797,7 +1214,7 @@ onUnmounted(() => {
 .message {
   display: flex;
   gap: 12px;
-  padding: 3px 24px;
+  padding: 2px 24px;
   transition: background 0.1s;
 }
 
@@ -805,9 +1222,20 @@ onUnmounted(() => {
   background: rgba(0,0,0,0.02);
 }
 
+.message-highlighted {
+  background: rgba(232, 80, 26, 0.08);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+/* First message from a new author in a new group — extra top gap */
+.message-group-start {
+  padding-top: 10px;
+}
+
+/* Follow-up messages in the same group — tight */
 .message-grouped {
-  padding-top: 2px;
-  padding-bottom: 2px;
+  padding-top: 1px;
+  padding-bottom: 1px;
 }
 
 .message-avatar-col {
@@ -827,6 +1255,14 @@ onUnmounted(() => {
   font-weight: 700;
   color: white;
   flex-shrink: 0;
+}
+
+.message-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 
 .message-avatar-placeholder {
@@ -871,6 +1307,26 @@ onUnmounted(() => {
   color: var(--text-light);
 }
 
+.message-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.message-edited-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(232, 80, 26, 0.12);
+  color: var(--primary);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .absence-banner {
   display: inline-flex;
   align-items: center;
@@ -892,8 +1348,184 @@ onUnmounted(() => {
   word-break: break-word;
 }
 
+.message-text-deleted {
+  color: var(--text-light);
+  font-style: italic;
+}
+
+.message-inline-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.message:hover .message-inline-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.message-action-btn {
+  border: none;
+  background: none;
+  color: var(--text-light);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.message-action-btn:hover {
+  color: var(--primary);
+}
+
+.message-action-btn.danger:hover {
+  color: var(--danger);
+}
+
+.message-edit-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 12px;
+  background: var(--content-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.message-edit-input {
+  width: 100%;
+  resize: vertical;
+  min-height: 82px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--white);
+  outline: none;
+  font-family: var(--font);
+}
+
+.message-edit-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.message-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .message-attachment {
   margin-top: 6px;
+}
+
+.message-reactions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.reaction-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--text);
+  font-size: 13px;
+  transition: var(--transition);
+}
+
+.reaction-chip:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.reaction-chip-active {
+  border-color: var(--primary);
+  background: rgba(232, 80, 26, 0.12);
+  color: var(--primary);
+}
+
+.reaction-chip:disabled,
+.reaction-add-btn:disabled,
+.reaction-picker-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.reaction-chip-emoji {
+  line-height: 1;
+}
+
+.reaction-chip-count {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.reaction-picker-wrapper {
+  position: relative;
+}
+
+.reaction-add-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px dashed var(--border);
+  background: var(--content-bg);
+  color: var(--text-light);
+  font-size: 16px;
+  font-weight: 700;
+  transition: var(--transition);
+}
+
+.reaction-add-btn:hover,
+.reaction-add-btn-active {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.reaction-picker {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: var(--radius);
+  background: var(--white);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  z-index: 30;
+}
+
+.reaction-picker-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: transparent;
+  font-size: 18px;
+  transition: var(--transition);
+}
+
+.reaction-picker-btn:hover {
+  background: var(--content-bg);
+  transform: translateY(-1px);
 }
 
 .attachment-link {
@@ -984,6 +1616,14 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
+.member-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
 .member-info {
   display: flex;
   flex-direction: column;
@@ -1014,6 +1654,7 @@ onUnmounted(() => {
   padding: 12px 16px 14px;
   background: var(--white);
   border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
   flex-shrink: 0;
 }
 
@@ -1152,6 +1793,12 @@ onUnmounted(() => {
     font-size: 15px;
   }
 
+  .chat-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 10px 12px;
+  }
+
   .message {
     padding: 3px 12px;
   }
@@ -1163,6 +1810,17 @@ onUnmounted(() => {
 
   .message-input-area {
     padding: 8px 12px 10px;
+  }
+
+  .message-inline-actions {
+    opacity: 1;
+    pointer-events: auto;
+    flex-wrap: wrap;
+  }
+
+  .reaction-picker {
+    left: auto;
+    right: 0;
   }
 
   .members-panel {

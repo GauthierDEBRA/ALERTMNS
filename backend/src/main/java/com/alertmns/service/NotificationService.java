@@ -9,7 +9,9 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -24,10 +26,15 @@ public class NotificationService {
         Utilisateur utilisateur = utilisateurRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé: " + userId));
 
+        if (!shouldSendNotification(utilisateur, type)) {
+            return null;
+        }
+
         Notification notification = Notification.builder()
                 .type(type)
                 .contenu(contenu)
                 .isLu(false)
+                .dateCreation(LocalDateTime.now())
                 .utilisateur(utilisateur)
                 .build();
 
@@ -41,6 +48,17 @@ public class NotificationService {
         }
 
         return notification;
+    }
+
+    private boolean shouldSendNotification(Utilisateur utilisateur, String type) {
+        String normalizedType = type == null ? "" : type.trim().toUpperCase(Locale.ROOT);
+
+        return switch (normalizedType) {
+            case "REUNION" -> !Boolean.FALSE.equals(utilisateur.getNotifyReunions());
+            case "MESSAGE" -> !Boolean.FALSE.equals(utilisateur.getNotifyMessages());
+            case "ABSENCE" -> !Boolean.FALSE.equals(utilisateur.getNotifyAbsences());
+            default -> true;
+        };
     }
 
     @Transactional(readOnly = true)

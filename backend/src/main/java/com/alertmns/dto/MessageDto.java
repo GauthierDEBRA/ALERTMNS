@@ -17,12 +17,16 @@ public class MessageDto {
     private Long idMessage;
     private String contenu;
     private LocalDateTime dateEnvoi;
+    private LocalDateTime dateModification;
+    private Boolean isDeleted;
     private Long canalId;
     private Long userId;
     private String userNom;
     private String userPrenom;
     private String userEmail;
+    private String userAvatarUrl;
     private List<PieceJointeDto> piecesJointes;
+    private List<ReactionDto> reactions;
 
     @Data
     @Builder
@@ -32,5 +36,15 @@ public class MessageDto {
         private Long idPj;
         private String nomFichier;
         private String url;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ReactionDto {
+        private String emoji;
+        private Integer count;
+        private List<Long> userIds;
     }
 }

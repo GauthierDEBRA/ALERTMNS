@@ -26,4 +26,13 @@ public interface PointageRepository extends JpaRepository<Pointage, Long> {
 
     @Query("SELECT DISTINCT p.utilisateur.idUser FROM Pointage p WHERE p.dateFin IS NULL")
     List<Long> findPresentUserIds();
+
+    @Query("SELECT p FROM Pointage p JOIN FETCH p.utilisateur u " +
+            "WHERE (:userId IS NULL OR u.idUser = :userId) " +
+            "AND (:start IS NULL OR p.dateDebut >= :start) " +
+            "AND (:end IS NULL OR p.dateDebut <= :end) " +
+            "ORDER BY p.dateDebut DESC")
+    List<Pointage> findForAdminExport(@Param("userId") Long userId,
+                                      @Param("start") LocalDateTime start,
+                                      @Param("end") LocalDateTime end);
 }

@@ -27,6 +27,7 @@ docker compose up --build
 # 3. L'application est disponible sur :
 #    http://localhost       ← Interface web
 #    http://localhost:8080  ← API Spring Boot
+#    http://localhost:8081  ← Adminer (interface base de données)
 #    localhost:3306         ← MySQL
 ```
 
@@ -126,7 +127,14 @@ ALERTMNS/
 ```bash
 cd backend
 # Modifier application.properties : spring.datasource.url=jdbc:mysql://localhost:3306/alertmns
-mvn spring-boot:run
+./mvn-local.sh spring-boot:run
+```
+
+Si `mvn` utilise un JDK trop recent sur ta machine, tu peux aussi lancer ponctuellement :
+
+```bash
+cd backend
+JAVA_HOME=$(/usr/libexec/java_home -v 21) mvn -DskipTests package
 ```
 
 ### Frontend

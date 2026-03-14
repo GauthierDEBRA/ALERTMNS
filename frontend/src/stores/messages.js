@@ -1,19 +1,26 @@
 import { defineStore } from 'pinia'
 import api from '../api/axios.js'
 
-// Normalize backend MessageDto fields to frontend field names
-function normalizeMessage(msg) {
+function normalizeMessage(msg = {}) {
   return {
     ...msg,
     id: msg.id ?? msg.idMessage,
     canalId: msg.canalId,
     contenu: msg.contenu,
     dateEnvoi: msg.dateEnvoi,
+    dateModification: msg.dateModification ?? null,
+    isDeleted: msg.isDeleted ?? false,
     auteurId: msg.auteurId ?? msg.userId,
     auteurNom: msg.auteurNom ?? msg.userNom,
     auteurPrenom: msg.auteurPrenom ?? msg.userPrenom,
+    auteurAvatarUrl: msg.auteurAvatarUrl ?? msg.userAvatarUrl ?? null,
     pieceJointeUrl: msg.pieceJointeUrl ?? (msg.piecesJointes?.[0]?.url || null),
-    pieceJointeNom: msg.pieceJointeNom ?? (msg.piecesJointes?.[0]?.nomFichier || null)
+    pieceJointeNom: msg.pieceJointeNom ?? (msg.piecesJointes?.[0]?.nomFichier || null),
+    reactions: (msg.reactions || []).map(reaction => ({
+      emoji: reaction.emoji,
+      count: reaction.count ?? reaction.userIds?.length ?? 0,
+      userIds: reaction.userIds || []
+    }))
   }
 }
 
@@ -54,9 +61,13 @@ export const useMessagesStore = defineStore('messages', {
       if (!this.messages[canalId]) {
         this.messages[canalId] = []
       }
-      // Check if this message already exists by real id
-      if (normalized.id && this.messages[canalId].some(m => m.id === normalized.id)) return
-      // Replace matching optimistic (temp) message from same author with same content
+
+      const existingIdx = this.messages[canalId].findIndex(message => message.id === normalized.id)
+      if (existingIdx !== -1) {
+        this.messages[canalId].splice(existingIdx, 1, normalized)
+        return
+      }
+
       const tempIdx = this.messages[canalId].findIndex(m =>
         m.id?.toString().startsWith('temp-') &&
         m.auteurId === normalized.auteurId &&
@@ -69,6 +80,24 @@ export const useMessagesStore = defineStore('messages', {
       }
     },
 
+    replaceMessage(canalId, msg) {
+      const normalized = normalizeMessage(msg)
+      if (!this.messages[canalId]) {
+        this.messages[canalId] = []
+      }
+      const index = this.messages[canalId].findIndex(message => message.id === normalized.id)
+      if (index === -1) {
+        this.messages[canalId].push(normalized)
+      } else {
+        this.messages[canalId].splice(index, 1, normalized)
+      }
+    },
+
+    removeMessage(canalId, messageId) {
+      if (!this.messages[canalId]) return
+      this.messages[canalId] = this.messages[canalId].filter(message => message.id !== messageId)
+    },
+
     incrementUnread(canalId) {
       if (!this.unreadCounts[canalId]) {
         this.unreadCounts[canalId] = 0
@@ -76,9 +105,10 @@ export const useMessagesStore = defineStore('messages', {
       this.unreadCounts[canalId]++
     },
 
-    markAsRead(canalId) {
+    markAsRead(canalId, lastMessageId = null) {
       this.unreadCounts[canalId] = 0
-      api.put(`/messages/${canalId}/lire`).catch(() => {})
+      if (!lastMessageId) return
+      api.put(`/messages/${canalId}/lire`, { lastMessageId }).catch(() => {})
     },
 
     async sendMessage(canalId, contenu, fileUrl = null, fileName = null) {
@@ -94,6 +124,62 @@ export const useMessagesStore = defineStore('messages', {
       } catch (error) {
         const msg = error.response?.data?.message || 'Erreur lors de l\'envoi'
         return { success: false, message: msg }
+      }
+    },
+
+    async updateMessage(messageId, contenu) {
+      try {
+        const response = await api.put(`/messages/item/${messageId}`, { contenu })
+        return { success: true, message: response.data }
+      } catch (error) {
+        const msg = error.response?.data?.message || 'Erreur lors de la modification'
+        return { success: false, message: msg }
+      }
+    },
+
+    async deleteMessage(messageId) {
+      try {
+        const response = await api.delete(`/messages/item/${messageId}`)
+        return { success: true, message: response.data }
+      } catch (error) {
+        const msg = error.response?.data?.message || 'Erreur lors de la suppression'
+        return { success: false, message: msg }
+      }
+    },
+
+    async toggleReaction(messageId, emoji) {
+      try {
+        const response = await api.post(`/messages/item/${messageId}/reactions`, { emoji })
+        return { success: true, message: response.data }
+      } catch (error) {
+        const msg = error.response?.data?.message || 'Erreur lors de la reaction'
+        return { success: false, message: msg }
+      }
+    },
+
+    async searchMessages(query) {
+      try {
+        const response = await api.get('/messages/search', {
+          params: { q: query }
+        })
+        return {
+          success: true,
+          results: (response.data || []).map(result => ({
+            idMessage: result.idMessage,
+            canalId: result.canalId,
+            conversationName: result.conversationName,
+            typeCanal: result.typeCanal,
+            extrait: result.extrait,
+            dateEnvoi: result.dateEnvoi,
+            auteurId: result.userId,
+            auteurNom: result.userNom,
+            auteurPrenom: result.userPrenom,
+            auteurAvatarUrl: result.userAvatarUrl
+          }))
+        }
+      } catch (error) {
+        const msg = error.response?.data?.message || 'Erreur lors de la recherche'
+        return { success: false, message: msg, results: [] }
       }
     },
 

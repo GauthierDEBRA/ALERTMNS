@@ -16,7 +16,7 @@ public class Structure {
     @Column(name = "id_structure")
     private Long idStructure;
 
-    @Column(name = "nom", nullable = false, length = 150)
+    @Column(name = "nom", nullable = false, unique = true, length = 150)
     private String nom;
 
     @Column(name = "type_structure", length = 50)

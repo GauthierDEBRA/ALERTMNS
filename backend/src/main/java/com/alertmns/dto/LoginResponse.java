@@ -21,4 +21,8 @@ public class LoginResponse {
     private Long structureId;
     private String msgAbsence;
     private Boolean isActive;
+    private String avatarUrl;
+    private Boolean notifyReunions;
+    private Boolean notifyMessages;
+    private Boolean notifyAbsences;
 }

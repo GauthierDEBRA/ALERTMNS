@@ -18,8 +18,12 @@ public class UserDto {
     private String role;
     private String msgAbsence;
     private Boolean isActive;
+    private String avatarUrl;
     private Long structureId;
     private String structureNom;
     private String structureType;
     private Boolean isPresent;
+    private Boolean notifyReunions;
+    private Boolean notifyMessages;
+    private Boolean notifyAbsences;
 }

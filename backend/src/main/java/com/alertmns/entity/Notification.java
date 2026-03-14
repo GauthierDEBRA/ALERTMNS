@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "t_notification")
 @Data
@@ -28,6 +30,10 @@ public class Notification {
     @Column(name = "is_lu")
     @Builder.Default
     private Boolean isLu = false;
+
+    @Column(name = "date_creation", nullable = false)
+    @Builder.Default
+    private LocalDateTime dateCreation = LocalDateTime.now();
 
     @JsonIgnoreProperties({"mdp", "structure", "hibernateLazyInitializer", "handler"})
     @ManyToOne(fetch = FetchType.LAZY)

@@ -18,7 +18,7 @@
         <div class="hero-logo">A</div>
         <h2 class="hero-title">Bienvenue, {{ authStore.user?.prenom }} !</h2>
         <p class="hero-subtitle">
-          Sélectionnez un canal dans la barre latérale pour commencer à discuter
+          Sélectionnez un canal ou un message privé dans la barre latérale pour commencer à discuter
         </p>
       </div>
 
@@ -32,7 +32,7 @@
           </div>
           <div class="stat-info">
             <span class="stat-value">{{ channelsStore.channels.length }}</span>
-            <span class="stat-label">Canaux disponibles</span>
+            <span class="stat-label">Conversations disponibles</span>
           </div>
         </div>
 
@@ -69,13 +69,12 @@
         <div class="stat-card">
           <div class="stat-icon" style="background: rgba(159,122,234,0.1); color: #9f7aea">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
           </div>
           <div class="stat-info">
-            <span class="stat-value">{{ currentTime }}</span>
-            <span class="stat-label">Heure actuelle</span>
+            <span class="stat-value">{{ messagesStore.totalUnread }}</span>
+            <span class="stat-label">Messages non lus</span>
           </div>
         </div>
       </div>
@@ -92,7 +91,7 @@
               class="channel-shortcut"
             >
               <span class="shortcut-hash">#</span>
-              <span>{{ channel.nom }}</span>
+              <span>{{ channel.nom.replace(/^#/, '') }}</span>
             </router-link>
           </router-link>
 
@@ -137,24 +136,20 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth.js'
 import { useChannelsStore } from '../stores/channels.js'
 import { useNotificationsStore } from '../stores/notifications.js'
+import { useMessagesStore } from '../stores/messages.js'
 import NotificationPanel from '../components/NotificationPanel.vue'
 import api from '../api/axios.js'
 
 const authStore = useAuthStore()
 const channelsStore = useChannelsStore()
 const notifStore = useNotificationsStore()
+const messagesStore = useMessagesStore()
 
 const presentCount = ref(0)
-const currentTime = ref('')
-
-function updateTime() {
-  const now = new Date()
-  currentTime.value = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-}
 
 async function fetchPresence() {
   try {
@@ -165,16 +160,8 @@ async function fetchPresence() {
   }
 }
 
-let timeInterval = null
-
 onMounted(() => {
-  updateTime()
-  timeInterval = setInterval(updateTime, 30000)
   fetchPresence()
-})
-
-onUnmounted(() => {
-  if (timeInterval) clearInterval(timeInterval)
 })
 </script>
 
@@ -228,30 +215,30 @@ onUnmounted(() => {
 
 .welcome-hero {
   text-align: center;
-  padding: 40px 20px;
-  margin-bottom: 32px;
+  padding: 24px 20px 28px;
+  margin-bottom: 24px;
 }
 
 .hero-logo {
-  width: 80px;
-  height: 80px;
+  width: 52px;
+  height: 52px;
   background: var(--primary);
-  border-radius: 24px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 40px;
+  font-size: 24px;
   font-weight: 800;
   color: white;
-  margin: 0 auto 20px;
-  box-shadow: 0 8px 32px rgba(232, 80, 26, 0.3);
+  margin: 0 auto 16px;
+  box-shadow: 0 4px 16px rgba(232, 80, 26, 0.3);
 }
 
 .hero-title {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--text);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .hero-subtitle {
@@ -412,11 +399,11 @@ onUnmounted(() => {
   }
 
   .welcome-hero {
-    padding: 24px 12px;
+    padding: 16px 12px 20px;
   }
 
   .hero-title {
-    font-size: 22px;
+    font-size: 20px;
   }
 
   .stats-grid {
