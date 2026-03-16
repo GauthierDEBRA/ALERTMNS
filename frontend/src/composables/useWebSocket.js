@@ -7,10 +7,11 @@ let connectionPromise = null
 const subscriptions = new Map()
 const connectionState = ref('disconnected') // 'disconnected' | 'connecting' | 'connected'
 
-function buildWebSocketUrl(token) {
+function buildWebSocketUrl() {
+  // Le token NE DOIT PAS apparaître en query string (logs serveur, historique
+  // navigateur, Referer). Il est transmis via les connectHeaders STOMP CONNECT.
   const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:'
-  const baseUrl = `${protocol}//${window.location.host}/ws`
-  return token ? `${baseUrl}?token=${encodeURIComponent(token)}` : baseUrl
+  return `${protocol}//${window.location.host}/ws`
 }
 
 function getOrCreateClient(token) {
@@ -26,7 +27,7 @@ function getOrCreateClient(token) {
     connectionState.value = 'connecting'
 
     const client = new Client({
-      webSocketFactory: () => new SockJS(buildWebSocketUrl(token)),
+      webSocketFactory: () => new SockJS(buildWebSocketUrl()),
       connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
       debug: () => {},
       reconnectDelay: 5000,
