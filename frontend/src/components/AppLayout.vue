@@ -28,18 +28,35 @@
         <NotificationPanel />
       </div>
 
+      <!-- WebSocket status banner -->
+      <transition name="ws-banner">
+        <div v-if="wsDisconnected" class="ws-banner">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 6s4-4 11-4 11 4 11 4"/>
+            <path d="M5 10s2.5-2.5 7-2.5 7 2.5 7 2.5"/>
+            <line x1="2" y1="2" x2="22" y2="22"/>
+          </svg>
+          Connexion perdue — reconnexion en cours…
+        </div>
+      </transition>
+
       <!-- Page content -->
-      <router-view />
+      <router-view v-slot="{ Component, route }">
+        <transition name="page-fade" mode="out-in">
+          <component :is="Component" :key="route.path" />
+        </transition>
+      </router-view>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useChannelsStore } from '../stores/channels.js'
 import { useNotificationsStore } from '../stores/notifications.js'
 import { useAuthStore } from '../stores/auth.js'
 import { useWebSocket } from '../composables/useWebSocket.js'
+import { useToast } from '../composables/useToast.js'
 import Sidebar from './Sidebar.vue'
 import NotificationPanel from './NotificationPanel.vue'
 
@@ -47,32 +64,61 @@ const sidebarOpen = ref(false)
 const channelsStore = useChannelsStore()
 const notificationsStore = useNotificationsStore()
 const authStore = useAuthStore()
-const { connect, subscribeToNotifications } = useWebSocket()
+const { connect, subscribeToNotifications, connectionState } = useWebSocket()
+const { error: toastError } = useToast()
+
+// Only show banner after initial connection attempt (not on first load)
+const hasConnectedOnce = ref(false)
+const wsDisconnected = computed(() => hasConnectedOnce.value && connectionState.value === 'disconnected')
 
 let notifInterval = null
 
+function startPolling() {
+  if (notifInterval) return
+  notifInterval = setInterval(() => notificationsStore.fetchNotifications(), 30000)
+}
+
+function stopPolling() {
+  if (notifInterval) {
+    clearInterval(notifInterval)
+    notifInterval = null
+  }
+}
+
+// Stop polling when WS is connected, restart it as fallback when disconnected
+watch(connectionState, (state) => {
+  if (state === 'connected') {
+    hasConnectedOnce.value = true
+    stopPolling()
+  } else if (state === 'disconnected' && hasConnectedOnce.value) {
+    startPolling()
+  }
+})
+
 onMounted(async () => {
-  await channelsStore.fetchMyChannels()
+  const channelsOk = await channelsStore.fetchMyChannels()
+  if (!channelsOk) toastError('Impossible de charger vos canaux')
   await notificationsStore.fetchNotifications()
 
-  // Connect WebSocket then subscribe to personal notifications
   if (authStore.token) {
-    await connect(authStore.token)
-    if (authStore.user?.id) {
-      subscribeToNotifications(authStore.user.id, (notif) => {
-        notificationsStore.addNotification(notif)
-      })
+    try {
+      await connect(authStore.token)
+      if (authStore.user?.id) {
+        subscribeToNotifications(authStore.user.id, (notif) => {
+          notificationsStore.addNotification(notif)
+        })
+      }
+    } catch {
+      // First WS connection failed — fall back to polling
+      startPolling()
     }
+  } else {
+    startPolling()
   }
-
-  // Poll notifications every 30 seconds as fallback
-  notifInterval = setInterval(() => {
-    notificationsStore.fetchNotifications()
-  }, 30000)
 })
 
 onUnmounted(() => {
-  if (notifInterval) clearInterval(notifInterval)
+  stopPolling()
 })
 </script>
 
@@ -139,5 +185,44 @@ onUnmounted(() => {
   .mobile-header {
     display: flex;
   }
+}
+
+/* WebSocket status banner */
+.ws-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #f59e0b;
+  color: #1a1a1a;
+  font-size: 13px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.ws-banner-enter-active,
+.ws-banner-leave-active {
+  transition: max-height 0.2s ease, opacity 0.2s ease;
+  overflow: hidden;
+  max-height: 40px;
+}
+.ws-banner-enter-from,
+.ws-banner-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+
+/* Page transitions */
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.page-fade-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 </style>

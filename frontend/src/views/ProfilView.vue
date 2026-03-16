@@ -216,6 +216,35 @@
           </div>
         </div>
 
+        <!-- Apparence -->
+        <div class="card profil-section">
+          <h3 class="section-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5"/>
+              <line x1="12" y1="1" x2="12" y2="3"/>
+              <line x1="12" y1="21" x2="12" y2="23"/>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+              <line x1="1" y1="12" x2="3" y2="12"/>
+              <line x1="21" y1="12" x2="23" y2="12"/>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+            Apparence
+          </h3>
+          <p class="section-desc">Personnalisez l'interface selon vos préférences visuelles.</p>
+
+          <div class="preferences-list">
+            <label class="preference-row">
+              <div>
+                <strong>Mode sombre</strong>
+                <span>Passe l'interface en thème sombre pour moins de fatigue visuelle.</span>
+              </div>
+              <input type="checkbox" class="switch-input" :checked="isDark" @change="toggleDark" />
+            </label>
+          </div>
+        </div>
+
         <div class="card profil-section">
           <h3 class="section-title">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -463,9 +492,11 @@ import { computed, onMounted, ref } from 'vue'
 import NotificationPanel from '../components/NotificationPanel.vue'
 import { useAuthStore } from '../stores/auth.js'
 import { getAvatarColor } from '../utils/avatar.js'
+import { useDarkMode } from '../composables/useDarkMode.js'
 import api from '../api/axios.js'
 
 const authStore = useAuthStore()
+const { isDark, toggleDark } = useDarkMode()
 
 const avatarInputRef = ref(null)
 const uploadingAvatar = ref(false)
@@ -907,11 +938,23 @@ onMounted(async () => {
 }
 
 .profile-header {
-  background: linear-gradient(135deg, var(--dark) 0%, #283244 60%, #1d2230 100%);
+  background: linear-gradient(135deg, #1a1d23 0%, #2d3748 100%);
   padding: 32px;
   display: flex;
   align-items: flex-start;
   gap: 28px;
+  position: relative;
+}
+/* Fade doux vers le bas */
+.profile-header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background: linear-gradient(to bottom, transparent, var(--white));
+  pointer-events: none;
 }
 
 .profile-avatar-panel {
@@ -1068,8 +1111,8 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
-  padding: 18px 24px 24px;
-  background: linear-gradient(180deg, rgba(245, 247, 250, 0.95), rgba(255, 255, 255, 0.95));
+  padding: 22px 24px 24px;
+  background: var(--white);
 }
 
 .highlight-item {
@@ -1078,7 +1121,7 @@ onMounted(async () => {
   gap: 6px;
   padding: 16px;
   border-radius: 16px;
-  background: white;
+  background: var(--white);
   border: 1px solid var(--border);
 }
 
@@ -1156,7 +1199,7 @@ onMounted(async () => {
 }
 
 .input-readonly {
-  background: #f8fafc;
+  background: var(--content-bg);
   color: var(--text-light);
   cursor: not-allowed;
 }
@@ -1175,7 +1218,7 @@ onMounted(async () => {
   padding: 14px 16px;
   border: 1px solid var(--border);
   border-radius: 16px;
-  background: linear-gradient(180deg, #ffffff, #fbfcfd);
+  background: var(--content-bg);
 }
 
 .preference-row strong {
@@ -1237,7 +1280,7 @@ onMounted(async () => {
   padding: 14px 16px;
   border-radius: 16px;
   border: 1px solid var(--border);
-  background: #f8fafc;
+  background: var(--content-bg);
   margin-bottom: 16px;
 }
 
@@ -1279,7 +1322,7 @@ onMounted(async () => {
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 16px;
-  background: linear-gradient(180deg, #ffffff, #fbfcfd);
+  background: var(--content-bg);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1302,7 +1345,7 @@ onMounted(async () => {
   gap: 6px;
   padding: 14px;
   border-radius: 14px;
-  background: #f8fafc;
+  background: var(--content-bg);
   border: 1px solid var(--border);
 }
 
@@ -1336,7 +1379,7 @@ onMounted(async () => {
   padding: 16px;
   border-radius: 16px;
   border: 1px solid var(--border);
-  background: linear-gradient(180deg, #ffffff, #fbfcfd);
+  background: var(--content-bg);
 }
 
 .history-date {
@@ -1374,7 +1417,7 @@ onMounted(async () => {
   border-radius: 16px;
   color: var(--text-light);
   text-align: center;
-  background: #fbfcfd;
+  background: var(--content-bg);
 }
 
 .password-grid {

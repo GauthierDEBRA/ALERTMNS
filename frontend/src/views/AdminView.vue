@@ -262,43 +262,58 @@
       <!-- Audit Tab -->
       <div v-if="activeTab === 'audit' && canViewAudit">
         <div class="content-header">
-          <div class="search-bar audit-search">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="8"/>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input
-              v-model="auditQuery"
-              type="text"
-              placeholder="Rechercher dans l'audit : acteur, action, cible, détail..."
-              class="search-input"
-            />
-          </div>
-          <div class="filter-group">
-            <select v-model="auditActorFilter" class="form-input" style="width: auto;">
-              <option value="">Tous les acteurs</option>
-              <option v-for="user in users" :key="user.id" :value="user.id">
-                {{ user.prenom }} {{ user.nom }}
-              </option>
-            </select>
-            <select v-model="auditActionFilter" class="form-input" style="width: auto;">
-              <option value="">Toutes les actions</option>
-              <option v-for="action in auditActionOptions" :key="action" :value="action">{{ action }}</option>
-            </select>
-            <select v-model="auditTargetTypeFilter" class="form-input" style="width: auto;">
-              <option value="">Toutes les cibles</option>
-              <option v-for="targetType in auditTargetTypeOptions" :key="targetType" :value="targetType">
-                {{ targetType }}
-              </option>
-            </select>
-            <input v-model="auditStart" class="form-input" style="width: auto;" type="date" />
-            <input v-model="auditEnd" class="form-input" style="width: auto;" type="date" />
-          </div>
-          <div class="filter-group">
+          <div class="audit-search-row">
+            <div class="search-bar audit-search">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input
+                v-model="auditQuery"
+                type="text"
+                placeholder="Rechercher dans l'audit : acteur, action, cible, détail..."
+                class="search-input"
+              />
+            </div>
+            <button
+              class="btn btn-secondary btn-sm audit-filter-toggle"
+              :class="{ 'filter-active': showAuditFilters }"
+              @click="showAuditFilters = !showAuditFilters"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="4" y1="6" x2="20" y2="6"/>
+                <line x1="8" y1="12" x2="16" y2="12"/>
+                <line x1="11" y1="18" x2="13" y2="18"/>
+              </svg>
+              Filtres{{ showAuditFilters ? ' ▲' : ' ▼' }}
+            </button>
             <button class="btn btn-secondary btn-sm" @click="fetchAuditLogs" :disabled="auditLogsLoading">
               {{ auditLogsLoading ? 'Chargement...' : 'Actualiser' }}
             </button>
           </div>
+
+          <transition name="audit-filters">
+            <div v-if="showAuditFilters" class="filter-group audit-filters-panel">
+              <select v-model="auditActorFilter" class="form-input" style="width: auto;">
+                <option value="">Tous les acteurs</option>
+                <option v-for="user in users" :key="user.id" :value="user.id">
+                  {{ user.prenom }} {{ user.nom }}
+                </option>
+              </select>
+              <select v-model="auditActionFilter" class="form-input" style="width: auto;">
+                <option value="">Toutes les actions</option>
+                <option v-for="action in auditActionOptions" :key="action" :value="action">{{ action }}</option>
+              </select>
+              <select v-model="auditTargetTypeFilter" class="form-input" style="width: auto;">
+                <option value="">Toutes les cibles</option>
+                <option v-for="targetType in auditTargetTypeOptions" :key="targetType" :value="targetType">
+                  {{ targetType }}
+                </option>
+              </select>
+              <input v-model="auditStart" class="form-input" style="width: auto;" type="date" />
+              <input v-model="auditEnd" class="form-input" style="width: auto;" type="date" />
+            </div>
+          </transition>
         </div>
 
         <div v-if="auditError" class="alert alert-error page-alert">{{ auditError }}</div>
@@ -849,6 +864,7 @@ const auditQuery = ref('')
 const auditStart = ref('')
 const auditEnd = ref('')
 const auditError = ref('')
+const showAuditFilters = ref(false)
 
 const showCreateUser = ref(false)
 const createUserForm = ref({
@@ -1839,6 +1855,55 @@ watch([auditActorFilter, auditActionFilter, auditTargetTypeFilter, auditQuery, a
 .filter-group {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Audit collapsible filters */
+.audit-search-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.audit-search-row .audit-search {
+  flex: 1;
+  min-width: 200px;
+}
+
+.audit-filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.audit-filter-toggle.filter-active {
+  background: var(--primary-light);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.audit-filters-panel {
+  margin-top: 10px;
+  padding: 14px;
+  background: var(--content-bg);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+/* Audit filters animation */
+.audit-filters-enter-active,
+.audit-filters-leave-active {
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+  overflow: hidden;
+  max-height: 200px;
+}
+.audit-filters-enter-from,
+.audit-filters-leave-to {
+  max-height: 0;
+  opacity: 0;
 }
 
 .loading-state {

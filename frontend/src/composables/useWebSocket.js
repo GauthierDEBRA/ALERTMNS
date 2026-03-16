@@ -76,6 +76,7 @@ export function useWebSocket() {
       await getOrCreateClient(token)
     } catch (err) {
       console.error('WebSocket connection error:', err)
+      throw err
     }
   }
 
