@@ -7,6 +7,28 @@ let connectionPromise = null
 const subscriptions = new Map()
 const connectionState = ref('disconnected') // 'disconnected' | 'connecting' | 'connected'
 
+/**
+ * Détecte les erreurs STOMP liées à un JWT invalide ou absent.
+ * Cible uniquement les messages renvoyés par WebSocketAuthChannelInterceptor.
+ */
+function isWsAuthError(frame) {
+  const msg = (frame?.headers?.message || '').toLowerCase()
+  return msg.includes('jeton') || msg.includes('token') || msg.includes('non authentifi')
+}
+
+/**
+ * Déconnexion propre sur expiration de session WebSocket :
+ * vide le localStorage, stocke le message et redirige vers /login.
+ */
+function handleWsAuthFailure() {
+  sessionStorage.setItem('authMessage', 'Votre session a expiré. Merci de vous reconnecter.')
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+  if (!window.location.pathname.includes('/login')) {
+    window.location.href = '/login'
+  }
+}
+
 function buildWebSocketUrl() {
   // Le token NE DOIT PAS apparaître en query string (logs serveur, historique
   // navigateur, Referer). Il est transmis via les connectHeaders STOMP CONNECT.
@@ -29,6 +51,13 @@ function getOrCreateClient(token) {
     const client = new Client({
       webSocketFactory: () => new SockJS(buildWebSocketUrl()),
       connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
+      // Avant chaque tentative de CONNECT (initial + reconnexions automatiques),
+      // on recharge le token depuis le localStorage pour couvrir les cas où le
+      // token HTTP a été silencieusement rafraîchi par l'intercepteur axios.
+      beforeConnect: () => {
+        const latestToken = localStorage.getItem('token')
+        client.connectHeaders = latestToken ? { Authorization: `Bearer ${latestToken}` } : {}
+      },
       debug: () => {},
       reconnectDelay: 5000,
       onConnect: () => {
@@ -46,6 +75,10 @@ function getOrCreateClient(token) {
         console.error('STOMP error:', frame)
         connectionState.value = 'disconnected'
         connectionPromise = null
+        if (isWsAuthError(frame)) {
+          // JWT invalide ou expiré : déconnexion propre et retour au login
+          handleWsAuthFailure()
+        }
         reject(new Error('STOMP error'))
       },
       onWebSocketError: (event) => {
