@@ -86,8 +86,6 @@ public class UtilisateurService {
                 .build();
 
         utilisateur = utilisateurRepository.save(utilisateur);
-        auditLogService.logAction(null, "USER_CREATED", "USER", utilisateur.getIdUser(),
-                "Nouvel utilisateur créé : " + email + " (rôle : " + utilisateur.getRole() + ")");
         return toDto(utilisateur, false);
     }
 
@@ -111,8 +109,6 @@ public class UtilisateurService {
         utilisateur.setStructure(resolveStructure(userDto.getStructureId()));
 
         utilisateur = utilisateurRepository.save(utilisateur);
-        auditLogService.logAction(null, "USER_UPDATED", "USER", utilisateur.getIdUser(),
-                "Mise à jour admin de l'utilisateur " + utilisateur.getEmail());
         return toDto(utilisateur, false);
     }
 

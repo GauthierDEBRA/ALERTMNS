@@ -126,7 +126,14 @@
           </div>
         </template>
 
-        <div v-if="!messagesStore.loading && messages.length === 0" class="messages-empty">
+        <div v-if="!messagesStore.loading && messagesStore.hasLoadError(canalId)" class="messages-empty" style="color:var(--color-danger,#ef4444);">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:8px;opacity:0.6">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <p>Impossible de charger les messages.</p>
+          <button class="btn btn-sm" style="margin-top:8px;" @click="messagesStore.fetchMessages(canalId)">Réessayer</button>
+        </div>
+        <div v-else-if="!messagesStore.loading && messages.length === 0" class="messages-empty">
           <div class="empty-channel-icon">{{ isDirectChannel ? '@' : '#' }}</div>
           <h3>{{ isDirectChannel ? `Conversation avec ${channelDisplayName}` : `Bienvenue dans #${channelDisplayName}` }}</h3>
           <p>{{ isDirectChannel ? 'Dites bonjour pour lancer la conversation privée.' : "C'est le début de ce canal. Envoyez le premier message !" }}</p>

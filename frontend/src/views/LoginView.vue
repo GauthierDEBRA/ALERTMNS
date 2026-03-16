@@ -94,6 +94,12 @@
             </span>
             <span v-else>Se connecter</span>
           </button>
+
+          <div style="text-align:center;margin-top:12px;">
+            <router-link to="/forgot-password" style="color:var(--color-primary);font-size:0.875rem;opacity:0.85;">
+              Mot de passe oublié ?
+            </router-link>
+          </div>
         </form>
       </div>
 
