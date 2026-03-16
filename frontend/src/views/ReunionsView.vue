@@ -27,8 +27,14 @@
       </div>
 
       <template v-else>
-        <div v-if="responseSuccess" class="alert alert-success page-alert">{{ responseSuccess }}</div>
-        <div v-if="responseError" class="alert alert-error page-alert">{{ responseError }}</div>
+        <div v-if="responseSuccess" class="alert alert-success page-alert dismissible-alert">
+          {{ responseSuccess }}
+          <button class="alert-dismiss" @click="responseSuccess = ''" aria-label="Fermer">✕</button>
+        </div>
+        <div v-if="responseError" class="alert alert-error page-alert dismissible-alert">
+          {{ responseError }}
+          <button class="alert-dismiss" @click="responseError = ''" aria-label="Fermer">✕</button>
+        </div>
 
         <!-- Pending invitations -->
         <div v-if="pendingReunions.length > 0" class="pending-section">
@@ -501,8 +507,10 @@ import NotificationPanel from '../components/NotificationPanel.vue'
 import { useAuthStore } from '../stores/auth.js'
 import { useDate } from '../composables/useDate.js'
 import api from '../api/axios.js'
+import { useToast } from '../composables/useToast.js'
 
 const authStore = useAuthStore()
+const { error: toastError } = useToast()
 const { formatDateFull, formatDateShort } = useDate()
 const route = useRoute()
 
@@ -804,7 +812,9 @@ async function fetchReunions() {
     reunions.value = (res.data || []).map(normalizeReunion).filter(reunion => reunion.id)
   } catch (e) {
     console.error('Error fetching reunions:', e)
-    responseError.value = e.response?.data?.message || 'Impossible de charger les réunions.'
+    const msg = e.response?.data?.message || 'Impossible de charger les réunions.'
+    responseError.value = msg
+    toastError(msg)
   } finally {
     loading.value = false
   }
@@ -1682,6 +1692,29 @@ watch(
 
 .page-alert {
   margin-bottom: 16px;
+}
+
+.dismissible-alert {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.alert-dismiss {
+  background: none;
+  border: none;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.6;
+  padding: 0;
+  flex-shrink: 0;
+  color: inherit;
+  transition: opacity 0.15s;
+}
+.alert-dismiss:hover {
+  opacity: 1;
 }
 
 .invitees-toolbar {

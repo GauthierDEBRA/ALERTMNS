@@ -79,13 +79,16 @@ const routes = [
   },
   {
     path: '/:pathMatch(.*)*',
-    redirect: '/chat'
+    name: 'NotFound',
+    component: () => import('../views/NotFoundView.vue'),
+    meta: { requiresAuth: false }
   }
 ]
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
+  scrollBehavior: () => ({ top: 0 })
 })
 
 router.beforeEach((to, from, next) => {

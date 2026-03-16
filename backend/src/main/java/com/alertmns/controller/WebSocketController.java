@@ -12,6 +12,8 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
+import java.util.HashMap;
+import java.util.Map;
 
 @Controller
 @RequiredArgsConstructor
@@ -46,13 +48,12 @@ public class WebSocketController {
             var currentUser = utilisateurService.getUserByEmail(user.getName());
             Long userId = currentUser.getIdUser();
             messageService.assertUserCanAccessCanal(canalId, userId);
-            messagingTemplate.convertAndSend("/topic/canal/" + canalId + "/typing",
-                    java.util.Map.of(
-                            "userId", userId,
-                            "email", user.getName(),
-                            "prenom", currentUser.getPrenom(),
-                            "nom", currentUser.getNom()
-                    ));
+            Map<String, Object> typingPayload = new HashMap<>();
+            typingPayload.put("userId", userId);
+            typingPayload.put("email", user.getName() != null ? user.getName() : "");
+            typingPayload.put("prenom", currentUser.getPrenom() != null ? currentUser.getPrenom() : "");
+            typingPayload.put("nom", currentUser.getNom() != null ? currentUser.getNom() : "");
+            messagingTemplate.convertAndSend("/topic/canal/" + canalId + "/typing", typingPayload);
         } catch (Exception e) {
             // ignore
         }

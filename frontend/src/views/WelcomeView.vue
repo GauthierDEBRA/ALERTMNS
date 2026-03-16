@@ -31,7 +31,7 @@
             </svg>
           </div>
           <div class="stat-info">
-            <span class="stat-value">{{ channelsStore.channels.length }}</span>
+            <span class="stat-value" :class="{ skeleton: channelsStore.loading }">{{ channelsStore.loading ? '' : channelsStore.channels.length }}</span>
             <span class="stat-label">Conversations disponibles</span>
           </div>
         </div>
@@ -46,7 +46,7 @@
             </svg>
           </div>
           <div class="stat-info">
-            <span class="stat-value">{{ presentCount }}</span>
+            <span class="stat-value" :class="{ skeleton: loadingStats }">{{ loadingStats ? '' : presentCount }}</span>
             <span class="stat-label">Collaborateurs présents</span>
           </div>
         </div>
@@ -66,25 +66,25 @@
           </div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-icon" style="background: rgba(159,122,234,0.1); color: #9f7aea">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-            </svg>
-          </div>
-          <div class="stat-info">
-            <span class="stat-value">{{ messagesStore.totalUnread }}</span>
-            <span class="stat-label">Messages non lus</span>
-          </div>
-        </div>
       </div>
 
       <!-- Quick actions -->
       <div class="quick-actions">
         <h3 class="section-title">Accès rapide</h3>
         <div class="actions-grid">
-          <div class="action-card channel-shortcuts-card" v-if="channelsStore.channels.length > 0">
+          <div v-if="channelsStore.channels.length === 0" class="action-card action-card-empty">
+            <div class="action-icon" style="color: var(--text-light)">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="4" y1="9" x2="20" y2="9"/>
+                <line x1="4" y1="15" x2="20" y2="15"/>
+                <line x1="10" y1="3" x2="8" y2="21"/>
+                <line x1="16" y1="3" x2="14" y2="21"/>
+              </svg>
+            </div>
+            <span class="action-label">Aucun canal</span>
+            <p class="empty-hint">Rejoins ou crée un canal depuis la barre latérale pour commencer à échanger.</p>
+          </div>
+          <div class="action-card channel-shortcuts-card" v-else>
             <div class="action-icon channel-shortcuts-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="4" y1="9" x2="20" y2="9"/>
@@ -143,25 +143,72 @@
           </router-link>
         </div>
       </div>
+
+      <!-- Activité récente -->
+      <div class="recent-section" v-if="recentActivity.length > 0">
+        <h3 class="section-title">Activité récente</h3>
+        <div class="activity-list">
+          <div
+            v-for="item in recentActivity"
+            :key="item.id"
+            class="activity-item"
+          >
+            <div class="activity-dot" :class="`dot-${item.type}`"></div>
+            <div class="activity-body">
+              <span class="activity-msg">{{ item.message }}</span>
+              <span class="activity-time">{{ item.timeAgo }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth.js'
 import { useChannelsStore } from '../stores/channels.js'
 import { useNotificationsStore } from '../stores/notifications.js'
-import { useMessagesStore } from '../stores/messages.js'
 import NotificationPanel from '../components/NotificationPanel.vue'
 import api from '../api/axios.js'
 
 const authStore = useAuthStore()
 const channelsStore = useChannelsStore()
 const notifStore = useNotificationsStore()
-const messagesStore = useMessagesStore()
 
 const presentCount = ref(0)
+const loadingStats = ref(true)
+
+function timeAgo(dateInput) {
+  if (!dateInput) return ''
+  const date = new Date(dateInput)
+  const diff = Math.floor((Date.now() - date.getTime()) / 1000)
+  if (diff < 60) return "à l'instant"
+  if (diff < 3600) return `il y a ${Math.floor(diff / 60)} min`
+  if (diff < 86400) return `il y a ${Math.floor(diff / 3600)} h`
+  return `il y a ${Math.floor(diff / 86400)} j`
+}
+
+function notifTypeKey(type) {
+  if (!type) return 'info'
+  const t = type.toLowerCase()
+  if (t.includes('message')) return 'message'
+  if (t.includes('reunion') || t.includes('meeting')) return 'meeting'
+  if (t.includes('absence')) return 'absence'
+  return 'info'
+}
+
+const recentActivity = computed(() => {
+  return notifStore.notifications
+    .slice(0, 6)
+    .map(n => ({
+      id: n.id,
+      message: n.message || n.contenu || '',
+      timeAgo: timeAgo(n.createdAt || n.dateCreation),
+      type: notifTypeKey(n.type)
+    }))
+})
 
 async function fetchPresence() {
   try {
@@ -169,6 +216,8 @@ async function fetchPresence() {
     presentCount.value = (res.data || []).length
   } catch (e) {
     // Silently fail
+  } finally {
+    loadingStats.value = false
   }
 }
 
@@ -294,6 +343,20 @@ onMounted(() => {
   gap: 2px;
 }
 
+.stat-value.skeleton {
+  display: inline-block;
+  width: 36px;
+  height: 24px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--border) 25%, var(--content-bg) 50%, var(--border) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 .stat-value {
   font-size: 22px;
   font-weight: 700;
@@ -411,6 +474,96 @@ onMounted(() => {
 .shortcut-hash {
   color: var(--primary);
   font-weight: 700;
+}
+
+/* Empty state canal card */
+.action-card-empty {
+  border: 2px dashed var(--border);
+  background: transparent;
+  box-shadow: none;
+  opacity: 0.8;
+}
+.action-card-empty:hover {
+  opacity: 1;
+  border-color: var(--primary);
+  transform: none;
+  box-shadow: none;
+}
+.empty-hint {
+  font-size: 0.78rem;
+  color: var(--text-light);
+  text-align: center;
+  margin: 4px 0 0;
+  line-height: 1.4;
+}
+
+/* Recent activity */
+.recent-section {
+  margin-bottom: 32px;
+}
+
+.activity-list {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s ease;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-item:hover {
+  background: var(--content-bg);
+}
+
+.activity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.dot-message  { background: var(--primary); }
+.dot-meeting  { background: var(--info); }
+.dot-absence  { background: var(--warning); }
+.dot-info     { background: var(--text-light); }
+
+.activity-body {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.activity-msg {
+  font-size: 13px;
+  color: var(--text);
+  flex: 1;
+  line-height: 1.45;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activity-time {
+  font-size: 11px;
+  color: var(--text-light);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {

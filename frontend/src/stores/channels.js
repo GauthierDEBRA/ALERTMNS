@@ -82,8 +82,10 @@ export const useChannelsStore = defineStore('channels', {
       try {
         const response = await api.get('/canaux/mes-canaux')
         this.channels = (response.data || []).map(normalizeChannel)
+        return true
       } catch (error) {
         console.error('Error fetching channels:', error)
+        return false
       } finally {
         this.loading = false
       }

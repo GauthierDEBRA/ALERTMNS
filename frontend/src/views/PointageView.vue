@@ -56,7 +56,7 @@
       <!-- Stats -->
       <div class="stats-section">
         <h2 class="section-heading">Mes statistiques</h2>
-        <div class="stats-grid">
+        <div class="stats-grid" :class="{ 'stats-loading': loadingData }">
           <div class="stat-card">
             <div class="stat-header">
               <span class="stat-label">Aujourd'hui</span>
@@ -67,7 +67,7 @@
                 </svg>
               </div>
             </div>
-            <div class="stat-value">{{ stats.dailyFormatted || '0h 00min' }}</div>
+            <div class="stat-value" :class="{ skeleton: loadingData }">{{ loadingData ? '' : (stats.dailyFormatted || '0h 00min') }}</div>
             <div class="stat-bar">
               <div class="stat-bar-fill" :style="{ width: Math.max(0, Math.min((stats.dailyMinutes || 0) / 480 * 100, 100)) + '%' }"></div>
             </div>
@@ -86,7 +86,7 @@
                 </svg>
               </div>
             </div>
-            <div class="stat-value">{{ stats.weeklyFormatted || '0h 00min' }}</div>
+            <div class="stat-value" :class="{ skeleton: loadingData }">{{ loadingData ? '' : (stats.weeklyFormatted || '0h 00min') }}</div>
             <div class="stat-bar">
               <div class="stat-bar-fill week-bar" :style="{ width: Math.max(0, Math.min((stats.weeklyMinutes || 0) / 2400 * 100, 100)) + '%' }"></div>
             </div>
@@ -102,7 +102,7 @@
                 </svg>
               </div>
             </div>
-            <div class="stat-value">{{ stats.monthlyFormatted || '0h 00min' }}</div>
+            <div class="stat-value" :class="{ skeleton: loadingData }">{{ loadingData ? '' : (stats.monthlyFormatted || '0h 00min') }}</div>
             <div class="stat-bar">
               <div class="stat-bar-fill month-bar" :style="{ width: Math.max(0, Math.min((stats.monthlyMinutes || 0) / 10380 * 100, 100)) + '%' }"></div>
             </div>
@@ -111,7 +111,7 @@
         </div>
       </div>
 
-      <!-- Present employees table -->
+      <!-- Present employees tiles -->
       <div class="present-section">
         <div class="section-header-row">
           <h2 class="section-heading">Employés présents ({{ presentUsers.length }})</h2>
@@ -124,45 +124,27 @@
           </button>
         </div>
 
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Employé</th>
-                <th>Rôle</th>
-                <th>Statut</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="user in presentUsers" :key="user.idUser">
-                <td>
-                  <div class="user-cell">
-                    <div class="user-cell-avatar" :style="{ background: getAvatarColor(user) }">
-                      {{ `${user.prenom?.[0] || ''}${user.nom?.[0] || ''}`.toUpperCase() }}
-                    </div>
-                    <div class="user-cell-info">
-                      <span class="user-cell-name">{{ user.prenom }} {{ user.nom }}</span>
-                      <span class="user-cell-email">{{ user.email }}</span>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <span class="role-badge" :class="getRoleClass(user.role)">{{ user.role }}</span>
-                </td>
-                <td>
-                  <div class="status-cell">
-                    <span class="status-dot online"></span>
-                    <span class="status-text-cell">Présent</span>
-                  </div>
-                </td>
-              </tr>
-              <tr v-if="presentUsers.length === 0">
-                <td colspan="3" style="text-align: center; color: var(--text-light); padding: 30px;">
-                  Aucun employé présent pour l'instant
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div v-if="presentUsers.length > 0" class="present-tiles">
+          <div v-for="user in presentUsers" :key="user.idUser" class="present-tile">
+            <div class="tile-avatar-wrap">
+              <div class="tile-avatar" :style="{ background: getAvatarColor(user) }">
+                {{ `${user.prenom?.[0] || ''}${user.nom?.[0] || ''}`.toUpperCase() }}
+              </div>
+              <span class="tile-online-dot"></span>
+            </div>
+            <span class="tile-name">{{ user.prenom }} {{ user.nom }}</span>
+            <span class="role-badge" :class="getRoleClass(user.role)">{{ user.role }}</span>
+          </div>
+        </div>
+
+        <div v-else class="present-empty">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.4">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <p>Aucun employé présent pour l'instant</p>
         </div>
       </div>
     </div>
@@ -175,11 +157,14 @@ import NotificationPanel from '../components/NotificationPanel.vue'
 import api from '../api/axios.js'
 import { useAuthStore } from '../stores/auth.js'
 import { getAvatarColor } from '../utils/avatar.js'
+import { useToast } from '../composables/useToast.js'
 
 const authStore = useAuthStore()
+const { error: toastError } = useToast()
 
 const isPresent = ref(false)
 const loading = ref(false)
+const loadingData = ref(true)
 const arrivalTime = ref('')
 const pointageError = ref('')
 const stats = ref({
@@ -235,6 +220,7 @@ async function fetchStats() {
     syncPresenceFromStats(data)
   } catch (e) {
     console.error('Error fetching stats:', e)
+    toastError('Impossible de charger vos statistiques de pointage')
   }
 }
 
@@ -245,6 +231,7 @@ async function fetchPresent() {
     isPresent.value = presentUsers.value.some(u => u.idUser === authStore.user?.id)
   } catch (e) {
     console.error('Error fetching present users:', e)
+    toastError('Impossible de charger la liste des présences')
   }
 }
 
@@ -270,6 +257,7 @@ let refreshInterval = null
 
 onMounted(async () => {
   await Promise.all([fetchPresent(), fetchStats()])
+  loadingData.value = false
   refreshInterval = setInterval(() => Promise.all([fetchPresent(), fetchStats()]), 60000)
 })
 
@@ -512,6 +500,19 @@ onUnmounted(() => {
   color: #9f7aea;
 }
 
+.stat-card .stat-value.skeleton {
+  width: 80px;
+  height: 32px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--border) 25%, var(--content-bg) 50%, var(--border) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 .stat-card .stat-value {
   font-size: 28px;
   font-weight: 800;
@@ -626,6 +627,82 @@ onUnmounted(() => {
   font-size: 13px;
   color: var(--success);
   font-weight: 500;
+}
+
+/* Present tiles */
+.present-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 14px;
+}
+
+.present-tile {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px 12px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  box-shadow: var(--shadow);
+  transition: var(--transition);
+}
+
+.present-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.tile-avatar-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.tile-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+}
+
+.tile-online-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--success);
+  border: 2px solid var(--white);
+  box-shadow: 0 0 0 2px rgba(72,187,120,0.25);
+}
+
+.tile-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* Present empty state */
+.present-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 20px;
+  color: var(--text-light);
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: 14px;
 }
 
 @media (max-width: 768px) {

@@ -761,15 +761,10 @@ function handleTypingEvent(payload = {}) {
 }
 
 function notifyTyping() {
-  if (!canalId.value || !messageText.value.trim()) {
-    return
-  }
-
+  if (!canalId.value) return
+  // Envoyer l'événement dès qu'on tape, même le 1er caractère
   const now = Date.now()
-  if (now - lastTypingSentAt.value < 1500) {
-    return
-  }
-
+  if (now - lastTypingSentAt.value < 1500) return
   lastTypingSentAt.value = now
   sendTyping(canalId.value)
 }
