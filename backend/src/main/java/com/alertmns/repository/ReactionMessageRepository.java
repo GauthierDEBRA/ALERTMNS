@@ -19,5 +19,8 @@ public interface ReactionMessageRepository extends JpaRepository<ReactionMessage
     @Query("SELECT r FROM ReactionMessage r LEFT JOIN FETCH r.utilisateur WHERE r.message.idMessage = :messageId ORDER BY r.idReaction ASC")
     List<ReactionMessage> findDetailedByMessageIdMessage(@Param("messageId") Long messageId);
 
+    @Query("SELECT r FROM ReactionMessage r LEFT JOIN FETCH r.utilisateur WHERE r.message.idMessage IN :messageIds ORDER BY r.idReaction ASC")
+    List<ReactionMessage> findDetailedByMessageIdMessageIn(@Param("messageIds") List<Long> messageIds);
+
     void deleteByMessageIdMessage(Long messageId);
 }

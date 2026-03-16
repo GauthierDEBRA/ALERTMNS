@@ -52,9 +52,11 @@ export const useMessagesStore = defineStore('messages', {
         return msgs
       } catch (error) {
         console.error('Error fetching messages:', error)
-        this.messages[canalId] = []
+        if (!this.messages[canalId]) {
+          this.messages[canalId] = null  // null = erreur, [] = vide
+        }
         this.hasMore[canalId] = false
-        return []
+        return null
       } finally {
         this.loading = false
       }

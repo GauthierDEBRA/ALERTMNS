@@ -91,7 +91,6 @@ public class MessageService {
     public Map<String, Object> getPagedMessages(Long canalId, Long beforeId, int limit, Long requesterUserId) {
         assertUserCanAccessCanal(canalId, requesterUserId);
         int safeLimit = Math.min(Math.max(limit, 1), MAX_PAGE_SIZE);
-        // On demande safeLimit + 1 pour détecter s'il y a d'autres messages.
         var pageable = PageRequest.of(0, safeLimit + 1);
 
         List<Message> raw = beforeId != null
@@ -101,9 +100,20 @@ public class MessageService {
         boolean hasMore = raw.size() > safeLimit;
         List<Message> page = hasMore ? raw.subList(0, safeLimit) : raw;
 
-        // Les requêtes retournent les messages du plus récent au plus ancien (DESC).
-        // On inverse pour afficher en ordre chronologique (ASC).
-        List<MessageDto> dtos = new ArrayList<>(page.stream().map(this::toDto).toList());
+        // Batch-fetch reactions in a single query to avoid N+1
+        List<Long> messageIds = page.stream()
+                .map(Message::getIdMessage)
+                .filter(id -> id != null)
+                .collect(Collectors.toList());
+        Map<Long, List<ReactionMessage>> reactionsByMessage = messageIds.isEmpty()
+                ? Collections.emptyMap()
+                : reactionMessageRepository.findDetailedByMessageIdMessageIn(messageIds)
+                        .stream()
+                        .collect(Collectors.groupingBy(r -> r.getMessage().getIdMessage()));
+
+        List<MessageDto> dtos = new ArrayList<>(page.stream()
+                .map(m -> toDtoWithReactions(m, reactionsByMessage.getOrDefault(m.getIdMessage(), Collections.emptyList())))
+                .toList());
         Collections.reverse(dtos);
 
         return Map.of("messages", dtos, "hasMore", hasMore);
@@ -279,6 +289,9 @@ public class MessageService {
     public String exportConversation(Long canalId, String format, Long requesterUserId) {
         assertUserCanAccessCanal(canalId, requesterUserId);
         List<Message> messages = messageRepository.findByIdCanalOrderByDateEnvoi(canalId);
+        if (messages.size() > 10_000) {
+            messages = messages.subList(messages.size() - 10_000, messages.size());
+        }
         List<MessageDto> dtos = messages.stream().map(this::toDto).collect(Collectors.toList());
 
         return switch (format.toLowerCase()) {
@@ -293,6 +306,9 @@ public class MessageService {
     public byte[] exportConversationBinary(Long canalId, String format, Long requesterUserId) {
         assertUserCanAccessCanal(canalId, requesterUserId);
         List<Message> messages = messageRepository.findByIdCanalOrderByDateEnvoi(canalId);
+        if (messages.size() > 10_000) {
+            messages = messages.subList(messages.size() - 10_000, messages.size());
+        }
         List<MessageDto> dtos = messages.stream().map(this::toDto).collect(Collectors.toList());
 
         return switch (format.toLowerCase()) {
@@ -591,6 +607,59 @@ public class MessageService {
         } catch (DocumentException | IOException e) {
             throw new RuntimeException("Impossible de générer le fichier PDF", e);
         }
+    }
+
+    private MessageDto toDtoWithReactions(Message message, List<ReactionMessage> preloadedReactions) {
+        List<MessageDto.PieceJointeDto> pjDtos = null;
+        if (!Boolean.TRUE.equals(message.getIsDeleted()) && message.getPiecesJointes() != null) {
+            pjDtos = message.getPiecesJointes().stream()
+                    .map(pj -> MessageDto.PieceJointeDto.builder()
+                            .idPj(pj.getIdPj())
+                            .nomFichier(pj.getNomFichier())
+                            .url(pj.getUrl())
+                            .build())
+                    .collect(Collectors.toList());
+        }
+
+        List<MessageDto.ReactionDto> reactionDtos = null;
+        if (!Boolean.TRUE.equals(message.getIsDeleted()) && !preloadedReactions.isEmpty()) {
+            Map<String, List<Long>> groupedReactions = new LinkedHashMap<>();
+            for (ReactionMessage reaction : preloadedReactions) {
+                if (reaction.getEmoji() == null || reaction.getUtilisateur() == null || reaction.getUtilisateur().getIdUser() == null) {
+                    continue;
+                }
+                groupedReactions
+                        .computeIfAbsent(reaction.getEmoji(), ignored -> new ArrayList<>())
+                        .add(reaction.getUtilisateur().getIdUser());
+            }
+
+            if (!groupedReactions.isEmpty()) {
+                reactionDtos = groupedReactions.entrySet().stream()
+                        .map(entry -> MessageDto.ReactionDto.builder()
+                                .emoji(entry.getKey())
+                                .count(entry.getValue().size())
+                                .userIds(entry.getValue())
+                                .build())
+                        .collect(Collectors.toList());
+            }
+        }
+
+        return MessageDto.builder()
+                .id(message.getIdMessage())
+                .idMessage(message.getIdMessage())
+                .contenu(message.getContenu())
+                .dateEnvoi(message.getDateEnvoi())
+                .dateModification(message.getDateModification())
+                .isDeleted(message.getIsDeleted())
+                .canalId(message.getCanal() != null ? message.getCanal().getIdCanal() : null)
+                .userId(message.getUtilisateur() != null ? message.getUtilisateur().getIdUser() : null)
+                .userNom(message.getUtilisateur() != null ? message.getUtilisateur().getNom() : null)
+                .userPrenom(message.getUtilisateur() != null ? message.getUtilisateur().getPrenom() : null)
+                .userEmail(message.getUtilisateur() != null ? message.getUtilisateur().getEmail() : null)
+                .userAvatarUrl(message.getUtilisateur() != null ? message.getUtilisateur().getAvatarUrl() : null)
+                .piecesJointes(pjDtos)
+                .reactions(reactionDtos)
+                .build();
     }
 
     public MessageDto toDto(Message message) {

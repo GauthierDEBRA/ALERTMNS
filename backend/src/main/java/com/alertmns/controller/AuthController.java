@@ -32,6 +32,9 @@ public class AuthController {
     @Value("${jwt.refresh-cookie-name}")
     private String refreshCookieName;
 
+    @Value("${server.use-secure-cookie:false}")
+    private boolean useSecureCookie;
+
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         try {
@@ -39,7 +42,7 @@ public class AuthController {
             return withRefreshCookie(ResponseEntity.ok(), session).body(session.getResponse());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", "Identifiants invalides: " + e.getMessage()));
+                    .body(Map.of("message", "Identifiants invalides"));
         }
     }
 
@@ -85,7 +88,7 @@ public class AuthController {
     private ResponseCookie buildRefreshCookie(String refreshToken) {
         return ResponseCookie.from(refreshCookieName, refreshToken)
                 .httpOnly(true)
-                .secure(false)
+                .secure(useSecureCookie)
                 .sameSite("Lax")
                 .path("/api/auth")
                 .maxAge(refreshExpirationMs / 1000)
@@ -95,7 +98,7 @@ public class AuthController {
     private ResponseCookie buildExpiredRefreshCookie() {
         return ResponseCookie.from(refreshCookieName, "")
                 .httpOnly(true)
-                .secure(false)
+                .secure(useSecureCookie)
                 .sameSite("Lax")
                 .path("/api/auth")
                 .maxAge(0)
