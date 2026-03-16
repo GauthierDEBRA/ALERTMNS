@@ -20,12 +20,14 @@ import com.alertmns.repository.UtilisateurRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -48,6 +50,42 @@ public class MessageService {
     private final NotificationService notificationService;
     private final FileService fileService;
     private static final Set<String> ALLOWED_REACTIONS = Set.of("👍", "❤️", "😂", "🎉", "✅", "👀");
+
+    private static final int DEFAULT_PAGE_SIZE = 30;
+    private static final int MAX_PAGE_SIZE = 100;
+
+    /**
+     * Retourne une page de messages pour un canal, du plus récent au plus ancien.
+     *
+     * @param canalId          identifiant du canal
+     * @param beforeId         curseur : ne retourner que les messages dont l'ID est &lt; beforeId
+     *                         (null pour charger les derniers messages)
+     * @param limit            nombre de messages demandés (plafonné à MAX_PAGE_SIZE)
+     * @param requesterUserId  utilisateur qui fait la demande
+     * @return map contenant {@code messages} (List&lt;MessageDto&gt;, ordre ASC) et
+     *         {@code hasMore} (boolean)
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> getPagedMessages(Long canalId, Long beforeId, int limit, Long requesterUserId) {
+        assertUserCanAccessCanal(canalId, requesterUserId);
+        int safeLimit = Math.min(Math.max(limit, 1), MAX_PAGE_SIZE);
+        // On demande safeLimit + 1 pour détecter s'il y a d'autres messages.
+        var pageable = PageRequest.of(0, safeLimit + 1);
+
+        List<Message> raw = beforeId != null
+                ? messageRepository.findBeforeIdPaged(canalId, beforeId, pageable)
+                : messageRepository.findLatestByIdCanalPaged(canalId, pageable);
+
+        boolean hasMore = raw.size() > safeLimit;
+        List<Message> page = hasMore ? raw.subList(0, safeLimit) : raw;
+
+        // Les requêtes retournent les messages du plus récent au plus ancien (DESC).
+        // On inverse pour afficher en ordre chronologique (ASC).
+        List<MessageDto> dtos = new ArrayList<>(page.stream().map(this::toDto).toList());
+        Collections.reverse(dtos);
+
+        return Map.of("messages", dtos, "hasMore", hasMore);
+    }
 
     @Transactional(readOnly = true)
     public List<MessageDto> getMessagesByCanal(Long canalId, Long requesterUserId) {

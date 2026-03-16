@@ -29,6 +29,8 @@ export const useMessagesStore = defineStore('messages', {
   state: () => ({
     messages: {},
     unreadCounts: {},
+    hasMore: {},       // { [canalId]: boolean }
+    loadingMore: {},   // { [canalId]: boolean }
     loading: false
   }),
 
@@ -42,16 +44,42 @@ export const useMessagesStore = defineStore('messages', {
     async fetchMessages(canalId) {
       this.loading = true
       try {
-        const response = await api.get(`/messages/${canalId}`)
-        const msgs = (response.data || []).map(normalizeMessage)
+        const response = await api.get(`/messages/${canalId}`, { params: { limit: 30 } })
+        const { messages, hasMore } = response.data
+        const msgs = (messages || []).map(normalizeMessage)
         this.messages[canalId] = msgs
+        this.hasMore[canalId] = hasMore ?? false
         return msgs
       } catch (error) {
         console.error('Error fetching messages:', error)
         this.messages[canalId] = []
+        this.hasMore[canalId] = false
         return []
       } finally {
         this.loading = false
+      }
+    },
+
+    async fetchOlderMessages(canalId) {
+      if (this.loadingMore[canalId] || !this.hasMore[canalId]) return false
+      const existing = this.messages[canalId] || []
+      if (existing.length === 0) return false
+      const oldestId = existing[0].id
+      this.loadingMore[canalId] = true
+      try {
+        const response = await api.get(`/messages/${canalId}`, {
+          params: { before: oldestId, limit: 30 }
+        })
+        const { messages, hasMore } = response.data
+        const older = (messages || []).map(normalizeMessage)
+        this.messages[canalId] = [...older, ...this.messages[canalId]]
+        this.hasMore[canalId] = hasMore ?? false
+        return true
+      } catch (error) {
+        console.error('Error fetching older messages:', error)
+        return false
+      } finally {
+        this.loadingMore[canalId] = false
       }
     },
 
@@ -239,6 +267,8 @@ export const useMessagesStore = defineStore('messages', {
     clearChannel(canalId) {
       delete this.messages[canalId]
       delete this.unreadCounts[canalId]
+      delete this.hasMore[canalId]
+      delete this.loadingMore[canalId]
     }
   }
 })
