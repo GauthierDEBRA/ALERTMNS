@@ -52,6 +52,7 @@ services:
       ALERTMNS_MAIL_FROM: ${ALERTMNS_MAIL_FROM:-no-reply@alertmns.local}
       ALERTMNS_MAIL_FROM_NAME: ${ALERTMNS_MAIL_FROM_NAME:-ALERTMNS}
       ALERTMNS_APP_BASE_URL: ${ALERTMNS_APP_BASE_URL:-http://localhost}
+      SERVER_USE_SECURE_COOKIE: ${SERVER_USE_SECURE_COOKIE:-false}
     ports:
       - "8080:8080"
     volumes:
@@ -63,7 +64,26 @@ services:
       retries: 5
       start_period: 40s
 
-  # ─── Frontend Vue.js (Nginx) ──────────────────────────────────────────────────
+  # ─── Caddy — reverse proxy TLS (HTTP → HTTPS automatique) ────────────────────
+  caddy:
+    image: caddy:2-alpine
+    container_name: alertmns-caddy
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Paris
+      ALERTMNS_DOMAIN: ${ALERTMNS_DOMAIN:-localhost}
+    depends_on:
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  # ─── Frontend Vue.js (Nginx interne) ─────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
@@ -75,8 +95,6 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-    ports:
-      - "80:80"
 
   # ─── Adminer (interface web MySQL) ───────────────────────────────────────────
   adminer:
@@ -106,3 +124,5 @@ services:
 volumes:
   db_data:
   uploads:
+  caddy_data:
+  caddy_config:

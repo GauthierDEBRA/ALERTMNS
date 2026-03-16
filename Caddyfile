@@ -1,0 +1,37 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# ALERTMNS — Caddyfile
+#
+# Caddy écoute sur :80 et :443.
+# Il obtient automatiquement un certificat Let's Encrypt pour ALERTMNS_DOMAIN.
+# Toutes les requêtes HTTP sont redirigées vers HTTPS sans configuration.
+#
+# Utilisation :
+#   ALERTMNS_DOMAIN=ton-domaine.com  dans le .env
+#
+# En local (ALERTMNS_DOMAIN=localhost) Caddy génère un certificat auto-signé
+# via sa propre CA. Lancer une fois : caddy trust  (ou accepter dans le navigateur)
+# ─────────────────────────────────────────────────────────────────────────────
+
+{$ALERTMNS_DOMAIN:localhost} {
+
+    # ── Compression ───────────────────────────────────────────────────────────
+    encode gzip
+
+    # ── Logs structurés ───────────────────────────────────────────────────────
+    log {
+        output stdout
+        format json
+        level  INFO
+    }
+
+    # ── Tout est renvoyé vers le frontend nginx (qui gère /api, /ws, /uploads) ─
+    reverse_proxy frontend:80 {
+        # Transmettre les vraies infos client
+        header_up X-Real-IP        {remote_host}
+        header_up X-Forwarded-For  {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+
+        # Santé : réessayer sur le prochain upstream si frontend répond 502/503
+        lb_try_duration 3s
+    }
+}
