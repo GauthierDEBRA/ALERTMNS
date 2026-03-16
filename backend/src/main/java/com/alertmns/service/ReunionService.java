@@ -41,6 +41,7 @@ public class ReunionService {
     private final ParticipantReunionRepository participantReunionRepository;
     private final UtilisateurRepository utilisateurRepository;
     private final NotificationService notificationService;
+    private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
     public List<Reunion> getAllReunions() {
@@ -130,6 +131,8 @@ public class ReunionService {
             );
         }
 
+        auditLogService.logAction(createurId, "REUNION_CREATED", "REUNION", reunion.getIdReunion(),
+                "Réunion créée : " + reunion.getTitre() + " le " + normalizedDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
         return reunion;
     }
 
@@ -168,6 +171,8 @@ public class ReunionService {
         refreshAutomaticReminderFlags(reunion, previousDatePrevue);
         Reunion saved = reunionRepository.save(reunion);
         notifyParticipantsOfUpdate(saved, requesterId);
+        auditLogService.logAction(requesterId, "REUNION_UPDATED", "REUNION", id,
+                "Réunion mise à jour : " + saved.getTitre());
         return saved;
     }
 
@@ -176,6 +181,8 @@ public class ReunionService {
         Reunion reunion = getManagedReunion(id);
         assertOrganizer(reunion, requesterId);
         notifyParticipantsOfCancellation(reunion, requesterId);
+        auditLogService.logAction(requesterId, "REUNION_DELETED", "REUNION", id,
+                "Réunion supprimée : " + reunion.getTitre());
         reunionRepository.delete(reunion);
     }
 

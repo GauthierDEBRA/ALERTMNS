@@ -26,6 +26,7 @@ public class CanalService {
     private final MembreCanalRepository membreCanalRepository;
     private final UtilisateurRepository utilisateurRepository;
     private final MessageRepository messageRepository;
+    private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
     public List<Canal> getAllCanaux() {
@@ -76,6 +77,8 @@ public class CanalService {
                 .build();
         membreCanalRepository.save(membre);
 
+        auditLogService.logAction(creatorUserId, "CANAL_CREATED", "CANAL", canal.getIdCanal(),
+                "Canal créé : " + canalName + (Boolean.TRUE.equals(estPrive) ? " (privé)" : " (public)"));
         return enrichMemberCount(canal);
     }
 
@@ -157,6 +160,8 @@ public class CanalService {
         Canal canal = canalRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Canal non trouve: " + id));
         ensureRegularChannel(canal);
+        auditLogService.logAction(null, "CANAL_DELETED", "CANAL", id,
+                "Canal supprimé : " + canal.getNom());
         canalRepository.deleteById(id);
     }
 
@@ -179,7 +184,10 @@ public class CanalService {
                 .canal(canal)
                 .role(normalizeMemberRole(role))
                 .build();
-        return membreCanalRepository.save(membre);
+        MembreCanal saved = membreCanalRepository.save(membre);
+        auditLogService.logAction(null, "CANAL_MEMBER_ADDED", "CANAL", canalId,
+                "Utilisateur " + userId + " ajouté au canal " + canal.getNom() + " (rôle : " + normalizeMemberRole(role) + ")");
+        return saved;
     }
 
     @Transactional
@@ -220,6 +228,8 @@ public class CanalService {
         }
 
         membreCanalRepository.delete(membre);
+        auditLogService.logAction(null, "CANAL_MEMBER_REMOVED", "CANAL", canalId,
+                "Utilisateur " + userId + " retiré du canal " + canal.getNom());
     }
 
     @Transactional(readOnly = true)

@@ -153,13 +153,24 @@ public class MessageController {
                                                 Authentication authentication) {
         try {
             Long userId = utilisateurService.getUserByEmail(authentication.getName()).getIdUser();
-            String content = messageService.exportConversation(canalId, format, userId);
-
+            String fmt = format.toLowerCase();
             HttpHeaders headers = new HttpHeaders();
-            String filename = "conversation_canal_" + canalId + "." + format.toLowerCase();
+            String filename = "conversation_canal_" + canalId + "." + fmt;
             headers.setContentDispositionFormData("attachment", filename);
 
-            MediaType mediaType = switch (format.toLowerCase()) {
+            if ("pdf".equals(fmt) || "xlsx".equals(fmt)) {
+                byte[] bytes = messageService.exportConversationBinary(canalId, fmt, userId);
+                MediaType mediaType = "pdf".equals(fmt)
+                        ? MediaType.APPLICATION_PDF
+                        : MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+                return ResponseEntity.ok()
+                        .headers(headers)
+                        .contentType(mediaType)
+                        .body(bytes);
+            }
+
+            String content = messageService.exportConversation(canalId, fmt, userId);
+            MediaType mediaType = switch (fmt) {
                 case "json" -> MediaType.APPLICATION_JSON;
                 case "csv" -> MediaType.parseMediaType("text/csv");
                 case "xml" -> MediaType.APPLICATION_XML;
