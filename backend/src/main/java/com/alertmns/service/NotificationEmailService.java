@@ -110,4 +110,43 @@ public class NotificationEmailService {
 
         return appBaseUrl + notification.getTargetRoute();
     }
+
+    public void sendPasswordResetEmail(Utilisateur utilisateur, String rawToken) {
+        if (!mailEnabled || utilisateur == null) {
+            return;
+        }
+
+        JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
+        if (mailSender == null) {
+            log.debug("Mail sender unavailable, skip password reset email for user {}", utilisateur.getIdUser());
+            return;
+        }
+
+        String resetUrl = appBaseUrl + "/reset-password?token=" + rawToken;
+        String prenom = utilisateur.getPrenom() != null && !utilisateur.getPrenom().isBlank()
+                ? utilisateur.getPrenom() : "Bonjour";
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(utilisateur.getEmail());
+            message.setFrom(fromAddress);
+            message.setSubject(fromName + " - Réinitialisation de votre mot de passe");
+            message.setText("""
+                    Bonjour %s,
+
+                    Vous avez demandé la réinitialisation de votre mot de passe ALERTMNS.
+
+                    Cliquez sur le lien ci-dessous pour choisir un nouveau mot de passe (valable 30 minutes) :
+
+                    %s
+
+                    Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
+
+                    Cet email a été envoyé automatiquement par ALERTMNS.
+                    """.formatted(prenom, resetUrl));
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.warn("Failed to send password reset email to {}", utilisateur.getEmail(), e);
+        }
+    }
 }

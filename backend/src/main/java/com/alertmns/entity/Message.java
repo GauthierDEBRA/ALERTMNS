@@ -10,7 +10,11 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name = "t_message")
+@Table(name = "t_message", indexes = {
+    @Index(name = "idx_message_canal", columnList = "id_canal"),
+    @Index(name = "idx_message_user", columnList = "id_user"),
+    @Index(name = "idx_message_date", columnList = "date_envoi")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

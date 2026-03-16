@@ -36,6 +36,7 @@ export const useMessagesStore = defineStore('messages', {
 
   getters: {
     getMessages: (state) => (canalId) => state.messages[canalId] || [],
+    hasLoadError: (state) => (canalId) => state.messages[canalId] === null,
     getUnreadCount: (state) => (canalId) => state.unreadCounts[canalId] || 0,
     totalUnread: (state) => Object.values(state.unreadCounts).reduce((sum, n) => sum + n, 0)
   },

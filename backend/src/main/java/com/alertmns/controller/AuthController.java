@@ -5,6 +5,7 @@ import com.alertmns.dto.LoginResponse;
 import com.alertmns.dto.RegisterRequest;
 import com.alertmns.dto.AuthSessionDto;
 import com.alertmns.service.AuthService;
+import com.alertmns.service.PasswordResetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,7 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
 
     @Value("${jwt.refresh-expiration}")
     private Long refreshExpirationMs;
@@ -75,6 +77,41 @@ public class AuthController {
         authService.logout(extractRefreshToken(request));
         return clearRefreshCookie(ResponseEntity.ok())
                 .body(Map.of("message", "Déconnexion effectuée"));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> body) {
+        try {
+            String email = body.get("email");
+            if (email == null || email.isBlank()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Email requis"));
+            }
+            passwordResetService.requestReset(email);
+            // Always return 200 to prevent user enumeration
+            return ResponseEntity.ok(Map.of("message",
+                    "Si cet email est connu, un lien de réinitialisation a été envoyé."));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of("message",
+                    "Si cet email est connu, un lien de réinitialisation a été envoyé."));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> body) {
+        try {
+            String token = body.get("token");
+            String newPassword = body.get("password");
+            if (token == null || token.isBlank() || newPassword == null || newPassword.isBlank()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Token et mot de passe requis"));
+            }
+            passwordResetService.resetPassword(token, newPassword);
+            return ResponseEntity.ok(Map.of("message", "Mot de passe réinitialisé avec succès"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
     }
 
     private ResponseEntity.BodyBuilder withRefreshCookie(ResponseEntity.BodyBuilder builder, AuthSessionDto session) {

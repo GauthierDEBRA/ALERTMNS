@@ -8,7 +8,11 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "t_notification")
+@Table(name = "t_notification", indexes = {
+    @Index(name = "idx_notif_user", columnList = "id_user"),
+    @Index(name = "idx_notif_lu", columnList = "is_lu"),
+    @Index(name = "idx_notif_date", columnList = "date_creation")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
