@@ -1,5 +1,14 @@
 <template>
   <aside class="sidebar">
+    <!-- Bandeau hors-ligne -->
+    <div v-if="!isNetworkOnline" class="offline-banner" role="alert">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="1" y1="1" x2="23" y2="23"/>
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/>
+      </svg>
+      Hors ligne — reconnexion en cours…
+    </div>
+
     <!-- Logo & App Name -->
     <div class="sidebar-header">
       <div class="logo">
@@ -404,6 +413,7 @@ const globalSearchResults = ref([])
 const searchingMessages = ref(false)
 const globalSearchError = ref('')
 const globalSearchRef = ref(null)
+const isNetworkOnline = ref(navigator.onLine)
 
 const totalUnread = computed(() => messagesStore.totalUnread)
 const availableDirectUsers = computed(() =>
@@ -580,11 +590,16 @@ watch(globalSearchQuery, (value) => {
   }, 250)
 })
 
+function handleOnline()  { isNetworkOnline.value = true  }
+function handleOffline() { isNetworkOnline.value = false }
+
 onMounted(() => {
   fetchPresent()
   fetchActiveUsers()
   presenceInterval = setInterval(fetchPresent, 15000)
   document.addEventListener('click', handleSearchOutsideClick)
+  window.addEventListener('online',  handleOnline)
+  window.addEventListener('offline', handleOffline)
   // Also update presence instantly via WebSocket when someone clocks in/out
   subscribeToPresence((users) => {
     presentUsers.value = users
@@ -596,10 +611,29 @@ onUnmounted(() => {
   if (presenceInterval) clearInterval(presenceInterval)
   if (globalSearchTimer) clearTimeout(globalSearchTimer)
   document.removeEventListener('click', handleSearchOutsideClick)
+  window.removeEventListener('online',  handleOnline)
+  window.removeEventListener('offline', handleOffline)
 })
 </script>
 
 <style scoped>
+.offline-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #92400e;
+  color: #fef3c7;
+  font-size: 0.78rem;
+  font-weight: 500;
+  animation: pulse-bg 2s ease-in-out infinite;
+}
+
+@keyframes pulse-bg {
+  0%, 100% { background: #92400e; }
+  50%       { background: #b45309; }
+}
+
 .sidebar {
   width: var(--sidebar-width);
   min-width: var(--sidebar-width);

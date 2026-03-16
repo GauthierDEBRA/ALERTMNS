@@ -17,13 +17,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Set;
+import com.alertmns.entity.UserRole;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
-
-    private static final Set<String> ALLOWED_ROLES = Set.of("Admin", "RH", "Responsable", "Collaborateur");
 
     private final UtilisateurRepository utilisateurRepository;
     private final StructureRepository structureRepository;
@@ -118,8 +116,8 @@ public class AuthService {
     }
 
     private String normalizeRole(String role) {
-        String normalized = (role == null || role.isBlank()) ? "Collaborateur" : role.trim();
-        if (!ALLOWED_ROLES.contains(normalized)) {
+        String normalized = (role == null || role.isBlank()) ? UserRole.DEFAULT : role.trim();
+        if (!UserRole.ALLOWED_VALUES.contains(normalized)) {
             throw new RuntimeException("Rôle invalide");
         }
         return normalized;

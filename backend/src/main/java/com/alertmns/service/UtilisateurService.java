@@ -5,6 +5,7 @@ import com.alertmns.dto.ProfilePreferencesRequest;
 import com.alertmns.dto.ProfileUpdateRequest;
 import com.alertmns.dto.UserDto;
 import com.alertmns.entity.Structure;
+import com.alertmns.entity.UserRole;
 import com.alertmns.entity.Utilisateur;
 import com.alertmns.service.FileService;
 import com.alertmns.repository.PointageRepository;
@@ -23,8 +24,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class UtilisateurService {
-
-    private static final Set<String> ALLOWED_ROLES = Set.of("Admin", "RH", "Responsable", "Collaborateur");
 
     private final UtilisateurRepository utilisateurRepository;
     private final StructureRepository structureRepository;
@@ -325,8 +324,8 @@ public class UtilisateurService {
     }
 
     private String normalizeRole(String role) {
-        String normalized = (role == null || role.isBlank()) ? "Collaborateur" : role.trim();
-        if (!ALLOWED_ROLES.contains(normalized)) {
+        String normalized = (role == null || role.isBlank()) ? UserRole.DEFAULT : role.trim();
+        if (!UserRole.ALLOWED_VALUES.contains(normalized)) {
             throw new RuntimeException("Rôle invalide");
         }
         return normalized;
