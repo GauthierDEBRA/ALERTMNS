@@ -1189,11 +1189,15 @@ onUnmounted(() => {
   }
 
   .channels-list {
-    max-height: 180px;
+    max-height: calc(30vh);
+  }
+
+  .direct-list {
+    max-height: calc(25vh);
   }
 
   .present-list {
-    max-height: 120px;
+    max-height: calc(20vh);
   }
 
   .sidebar-bottom {

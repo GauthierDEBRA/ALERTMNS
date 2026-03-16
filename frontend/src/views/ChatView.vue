@@ -2214,12 +2214,27 @@ onUnmounted(() => {
     right: 0;
     top: 0;
     height: 100%;
+    width: min(260px, 82vw);
+    min-width: unset;
     z-index: 300;
     box-shadow: var(--shadow-lg);
   }
 
   .desktop-notif-chat {
     display: none;
+  }
+
+  /* Tap targets minimum 44px */
+  .attach-btn,
+  .send-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .message-action-btn,
+  .mobile-menu-btn {
+    min-height: 36px;
+    padding: 6px 10px;
   }
 }
 </style>
