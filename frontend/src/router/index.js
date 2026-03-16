@@ -93,7 +93,6 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
-  authStore.loadFromStorage()
 
   const requiresAuth = to.matched.some(r => r.meta.requiresAuth !== false)
   const isLoginPage = to.path === '/login'

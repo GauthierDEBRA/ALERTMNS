@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import api from '../api/axios.js'
+import { setToken, clearToken } from '../utils/tokenStore.js'
 
 function normalizeUserPayload(data, fallbackEmail = '') {
   if (!data) return null
@@ -49,7 +50,7 @@ export const useAuthStore = defineStore('auth', {
         this.token = data.token
         this.user = normalizeUserPayload(data, email)
         this.isAuthenticated = true
-        localStorage.setItem('token', data.token)
+        setToken(data.token)
         localStorage.setItem('user', JSON.stringify(this.user))
         return { success: true }
       } catch (error) {
@@ -67,22 +68,41 @@ export const useAuthStore = defineStore('auth', {
         this.user = null
         this.token = null
         this.isAuthenticated = false
-        localStorage.removeItem('token')
+        clearToken()
+        localStorage.removeItem('user')
+      }
+    },
+
+    async initAuth() {
+      const userStr = localStorage.getItem('user')
+      try {
+        const response = await api.post('/auth/refresh', {})
+        const data = response.data
+        setToken(data.token)
+        this.token = data.token
+        this.user = normalizeUserPayload(data, data.email ?? '')
+        this.isAuthenticated = true
+        localStorage.setItem('user', JSON.stringify(this.user))
+      } catch {
+        // Pas de cookie de refresh valide → non connecté
+        clearToken()
+        this.token = null
+        this.isAuthenticated = false
+        if (userStr) {
+          // Conserver les infos affichables (nom, role) pour l'écran de login
+          try { this.user = normalizeUserPayload(JSON.parse(userStr)) } catch { this.user = null }
+        }
         localStorage.removeItem('user')
       }
     },
 
     loadFromStorage() {
-      const token = localStorage.getItem('token')
+      // Conservé pour compatibilité — utiliser initAuth() au démarrage de l'app
       const userStr = localStorage.getItem('user')
-      if (token && userStr) {
+      if (userStr) {
         try {
-          this.token = token
           this.user = normalizeUserPayload(JSON.parse(userStr))
-          this.isAuthenticated = true
-        } catch {
-          this.logout()
-        }
+        } catch { /* ignore */ }
       }
     },
 

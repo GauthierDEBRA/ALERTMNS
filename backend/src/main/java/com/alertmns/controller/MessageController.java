@@ -57,6 +57,10 @@ public class MessageController {
         try {
             Long userId = utilisateurService.getUserByEmail(authentication.getName()).getIdUser();
             String contenu = body.get("contenu") != null ? body.get("contenu").toString() : null;
+            if (contenu != null && contenu.length() > 10_000) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Le message ne peut pas dépasser 10 000 caractères"));
+            }
             String pieceJointeUrl = body.get("pieceJointeUrl") != null ? body.get("pieceJointeUrl").toString() : null;
             String pieceJointeNom = body.get("pieceJointeNom") != null ? body.get("pieceJointeNom").toString() : null;
 

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import router from '../router/index.js'
+import { getToken, setToken, clearToken } from '../utils/tokenStore.js'
 
 const api = axios.create({
   baseURL: '/api',
@@ -15,7 +16,7 @@ let refreshPromise = null
 function storeSessionFromResponse(data) {
   if (!data?.token) return null
 
-  localStorage.setItem('token', data.token)
+  setToken(data.token)
   localStorage.setItem('user', JSON.stringify({
     id: data.id ?? data.userId ?? data.idUser ?? null,
     nom: data.nom ?? '',
@@ -41,7 +42,7 @@ function clearSessionAndRedirect() {
   if (router.currentRoute.value.path !== '/login') {
     sessionStorage.setItem('authMessage', 'Votre session a expiré. Merci de vous reconnecter.')
   }
-  localStorage.removeItem('token')
+  clearToken()
   localStorage.removeItem('user')
   if (router.currentRoute.value.path !== '/login') {
     router.push('/login')
@@ -66,7 +67,7 @@ async function refreshAccessToken() {
 // Request interceptor - attach Bearer token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
+    const token = getToken()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -81,8 +82,9 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config || {}
     const requestUrl = String(originalRequest.url || '')
+    const status = error.response?.status
 
-    if (error.response && error.response.status === 401) {
+    if (status === 401) {
       const isAuthEndpoint = requestUrl.includes('/auth/login')
         || requestUrl.includes('/auth/refresh')
         || requestUrl.includes('/auth/logout')
@@ -103,6 +105,12 @@ api.interceptors.response.use(
       }
 
       clearSessionAndRedirect()
+    } else if (status === 403) {
+      // Rôle révoqué ou session invalide côté serveur
+      const isAuthEndpoint = requestUrl.includes('/auth/')
+      if (!isAuthEndpoint) {
+        clearSessionAndRedirect()
+      }
     }
     return Promise.reject(error)
   }

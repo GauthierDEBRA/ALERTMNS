@@ -1,6 +1,7 @@
 import { ref, onUnmounted } from 'vue'
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
+import { getToken } from '../utils/tokenStore.js'
 
 let stompClient = null
 let connectionPromise = null
@@ -22,7 +23,6 @@ function isWsAuthError(frame) {
  */
 function handleWsAuthFailure() {
   sessionStorage.setItem('authMessage', 'Votre session a expiré. Merci de vous reconnecter.')
-  localStorage.removeItem('token')
   localStorage.removeItem('user')
   if (!window.location.pathname.includes('/login')) {
     window.location.href = '/login'
@@ -55,7 +55,7 @@ function getOrCreateClient(token) {
       // on recharge le token depuis le localStorage pour couvrir les cas où le
       // token HTTP a été silencieusement rafraîchi par l'intercepteur axios.
       beforeConnect: () => {
-        const latestToken = localStorage.getItem('token')
+        const latestToken = getToken()
         client.connectHeaders = latestToken ? { Authorization: `Bearer ${latestToken}` } : {}
       },
       debug: () => {},
@@ -122,7 +122,7 @@ export function useWebSocket() {
     }
 
     try {
-      const client = await getOrCreateClient(localStorage.getItem('token'))
+      const client = await getOrCreateClient(getToken())
       const sub = client.subscribe(destination, (frame) => {
         try {
           const msg = JSON.parse(frame.body)
@@ -150,7 +150,7 @@ export function useWebSocket() {
     }
 
     try {
-      const client = await getOrCreateClient(localStorage.getItem('token'))
+      const client = await getOrCreateClient(getToken())
       const sub = client.subscribe(destination, (frame) => {
         try {
           const payload = JSON.parse(frame.body)
@@ -192,7 +192,7 @@ export function useWebSocket() {
 
   async function publish(destination, body) {
     try {
-      const client = await getOrCreateClient(localStorage.getItem('token'))
+      const client = await getOrCreateClient(getToken())
       client.publish({
         destination,
         body: JSON.stringify(body),
@@ -227,7 +227,7 @@ export function useWebSocket() {
       return
     }
     try {
-      const client = await getOrCreateClient(localStorage.getItem('token'))
+      const client = await getOrCreateClient(getToken())
       const sub = client.subscribe(destination, (frame) => {
         try {
           const notif = JSON.parse(frame.body)
@@ -253,7 +253,7 @@ export function useWebSocket() {
       return
     }
     try {
-      const client = await getOrCreateClient(localStorage.getItem('token'))
+      const client = await getOrCreateClient(getToken())
       const sub = client.subscribe(destination, (frame) => {
         try {
           const data = JSON.parse(frame.body)
