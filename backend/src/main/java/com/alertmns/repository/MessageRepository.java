@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import org.springframework.data.domain.Pageable;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -36,6 +38,20 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
 
     @Query("SELECT m.canal.idCanal, MAX(m.dateEnvoi) FROM Message m WHERE m.canal.idCanal IN :canalIds GROUP BY m.canal.idCanal")
     List<Object[]> findLastMessageDates(@Param("canalIds") List<Long> canalIds);
+
+    /** Derniers N messages d'un canal, du plus récent au plus ancien. */
+    @Query("SELECT m FROM Message m " +
+            "JOIN FETCH m.utilisateur " +
+            "WHERE m.canal.idCanal = :canalId " +
+            "ORDER BY m.idMessage DESC")
+    List<Message> findLatestByIdCanalPaged(@Param("canalId") Long canalId, Pageable pageable);
+
+    /** N messages plus anciens qu'un ID donné (scroll vers le haut). */
+    @Query("SELECT m FROM Message m " +
+            "JOIN FETCH m.utilisateur " +
+            "WHERE m.canal.idCanal = :canalId AND m.idMessage < :beforeId " +
+            "ORDER BY m.idMessage DESC")
+    List<Message> findBeforeIdPaged(@Param("canalId") Long canalId, @Param("beforeId") Long beforeId, Pageable pageable);
 
     @Query("SELECT DISTINCT m FROM Message m " +
             "JOIN FETCH m.utilisateur " +

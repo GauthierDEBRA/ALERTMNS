@@ -22,10 +22,14 @@ public class MessageController {
     private final UtilisateurService utilisateurService;
 
     @GetMapping("/{canalId}")
-    public ResponseEntity<?> getMessages(@PathVariable Long canalId, Authentication authentication) {
+    public ResponseEntity<?> getMessages(
+            @PathVariable Long canalId,
+            @RequestParam(required = false) Long before,
+            @RequestParam(defaultValue = "30") int limit,
+            Authentication authentication) {
         try {
             Long userId = utilisateurService.getUserByEmail(authentication.getName()).getIdUser();
-            return ResponseEntity.ok(messageService.getMessagesByCanal(canalId, userId));
+            return ResponseEntity.ok(messageService.getPagedMessages(canalId, before, limit, userId));
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("message", e.getMessage()));

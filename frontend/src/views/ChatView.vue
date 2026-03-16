@@ -106,7 +106,24 @@
           <p>Chargement des messages...</p>
         </div>
 
-        <div v-else-if="messages.length === 0" class="messages-empty">
+        <template v-else>
+          <!-- Sentinelle pour le scroll infini vers le haut -->
+          <div ref="topSentinel" class="top-sentinel"></div>
+
+          <!-- Indicateur de chargement des anciens messages -->
+          <div v-if="messagesStore.loadingMore[canalId]" class="messages-loading-more">
+            <div class="spinner spinner-sm"></div>
+            <span>Chargement des messages précédents...</span>
+          </div>
+
+          <!-- Indicateur "début de la conversation" -->
+          <div v-else-if="!messagesStore.hasMore[canalId] && messages.length > 0" class="conversation-start">
+            <div class="conversation-start-icon">{{ isDirectChannel ? '@' : '#' }}</div>
+            <p>Début de la conversation</p>
+          </div>
+        </template>
+
+        <div v-if="!messagesStore.loading && messages.length === 0" class="messages-empty">
           <div class="empty-channel-icon">{{ isDirectChannel ? '@' : '#' }}</div>
           <h3>{{ isDirectChannel ? `Conversation avec ${channelDisplayName}` : `Bienvenue dans #${channelDisplayName}` }}</h3>
           <p>{{ isDirectChannel ? 'Dites bonjour pour lancer la conversation privée.' : "C'est le début de ce canal. Envoyez le premier message !" }}</p>
@@ -462,6 +479,7 @@ const { subscribe, unsubscribe, subscribeToTyping, unsubscribeTyping, sendTyping
 const { formatDate, isSameDay, formatDayHeader } = useDate()
 
 const messagesContainer = ref(null)
+const topSentinel = ref(null)
 const textInput = ref(null)
 const fileInput = ref(null)
 const exportRef = ref(null)
@@ -621,6 +639,35 @@ const groupedMessages = computed(() => {
 
   return result
 })
+
+let topObserver = null
+
+function setupTopObserver() {
+  if (topObserver) topObserver.disconnect()
+  if (!topSentinel.value) return
+
+  topObserver = new IntersectionObserver(async ([entry]) => {
+    if (!entry.isIntersecting) return
+    if (!messagesStore.hasMore[canalId.value] || messagesStore.loadingMore[canalId.value]) return
+
+    // Préserver la position de scroll : on mémorise la hauteur AVANT le prepend
+    const container = messagesContainer.value
+    const prevScrollHeight = container?.scrollHeight ?? 0
+
+    const loaded = await messagesStore.fetchOlderMessages(canalId.value)
+
+    if (loaded && container) {
+      await nextTick()
+      // Ajuster scrollTop pour que la vue ne saute pas
+      container.scrollTop += container.scrollHeight - prevScrollHeight
+    }
+  }, {
+    root: messagesContainer.value,
+    threshold: 0.1
+  })
+
+  topObserver.observe(topSentinel.value)
+}
 
 async function scrollToBottom(smooth = false) {
   await nextTick()
@@ -1001,6 +1048,10 @@ async function initChannel(id) {
     await scrollToBottom()
   }
 
+  // Démarrer l'observer de scroll infini une fois que le DOM est prêt
+  await nextTick()
+  setupTopObserver()
+
   // Subscribe to WebSocket
   subscribe(id, (msg) => {
     const alreadyExists = messagesStore.getMessages(id).some(message => message.id === (msg.id ?? msg.idMessage))
@@ -1060,6 +1111,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  if (topObserver) topObserver.disconnect()
   unsubscribe(canalId.value)
   unsubscribeTyping(canalId.value)
   clearTypingUsers()
@@ -1343,6 +1395,46 @@ onUnmounted(() => {
   font-size: 18px;
   font-weight: 600;
   color: var(--text);
+}
+
+/* Scroll infini */
+.top-sentinel {
+  height: 1px;
+  width: 100%;
+}
+
+.messages-loading-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 0 4px;
+  color: var(--text-light);
+  font-size: 13px;
+}
+
+.spinner-sm {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}
+
+.conversation-start {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 24px 0 8px;
+  color: var(--text-light);
+  font-size: 13px;
+}
+
+.conversation-start-icon {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--primary);
+  opacity: 0.35;
+  line-height: 1;
 }
 
 .send-error {
