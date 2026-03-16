@@ -467,6 +467,63 @@ table tr:hover td {
 }
 
 /* Responsive */
+@media (max-width: 768px) {
+  /* Modals : padding réduit, hauteur max sécurisée */
+  .modal-overlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .modal {
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: calc(92vh - env(safe-area-inset-bottom, 0px));
+  }
+
+  .modal-header {
+    padding: 16px 16px 0;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .modal-footer {
+    padding: 0 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    flex-wrap: wrap;
+  }
+
+  .modal-footer .btn {
+    flex: 1;
+    min-width: 100px;
+    justify-content: center;
+  }
+
+  /* Boutons : surface de tap minimum 44px (recommandation WCAG) */
+  .btn:not(.btn-sm) {
+    min-height: 44px;
+  }
+
+  /* Tables : scroll horizontal avec indicateur visuel */
+  .table-container {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+}
+
+/* Supprime le délai de 300ms sur les éléments interactifs */
+button,
+a,
+label,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+/* Safe-area pour les appareils avec encoche (iPhone X+) */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .sidebar-bottom {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}
 
 /* Transitions */
 .fade-enter-active,
