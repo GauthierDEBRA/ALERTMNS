@@ -31,6 +31,7 @@ public class UtilisateurService {
     private final PointageRepository pointageRepository;
     private final PasswordEncoder passwordEncoder;
     private final FileService fileService;
+    private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
     public List<UserDto> getAllUsers() {
@@ -85,6 +86,8 @@ public class UtilisateurService {
                 .build();
 
         utilisateur = utilisateurRepository.save(utilisateur);
+        auditLogService.logAction(null, "USER_CREATED", "USER", utilisateur.getIdUser(),
+                "Nouvel utilisateur créé : " + email + " (rôle : " + utilisateur.getRole() + ")");
         return toDto(utilisateur, false);
     }
 
@@ -108,6 +111,8 @@ public class UtilisateurService {
         utilisateur.setStructure(resolveStructure(userDto.getStructureId()));
 
         utilisateur = utilisateurRepository.save(utilisateur);
+        auditLogService.logAction(null, "USER_UPDATED", "USER", utilisateur.getIdUser(),
+                "Mise à jour admin de l'utilisateur " + utilisateur.getEmail());
         return toDto(utilisateur, false);
     }
 
@@ -170,8 +175,10 @@ public class UtilisateurService {
         if (requesterId != null && requesterId.equals(id)) {
             throw new RuntimeException("Vous ne pouvez pas supprimer votre propre compte");
         }
-        utilisateurRepository.findById(id)
+        Utilisateur target = utilisateurRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé: " + id));
+        auditLogService.logAction(requesterId, "USER_DELETED", "USER", id,
+                "Suppression du compte : " + target.getEmail());
         utilisateurRepository.deleteById(id);
     }
 
@@ -181,6 +188,8 @@ public class UtilisateurService {
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé: " + id));
         utilisateur.setIsActive(true);
         utilisateur = utilisateurRepository.save(utilisateur);
+        auditLogService.logAction(requesterId, "USER_ACTIVATED", "USER", id,
+                "Compte activé : " + utilisateur.getEmail());
         return toDto(utilisateur, false);
     }
 
@@ -193,6 +202,8 @@ public class UtilisateurService {
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé: " + id));
         utilisateur.setIsActive(false);
         utilisateur = utilisateurRepository.save(utilisateur);
+        auditLogService.logAction(requesterId, "USER_DEACTIVATED", "USER", id,
+                "Compte désactivé : " + utilisateur.getEmail());
         return toDto(utilisateur, false);
     }
 

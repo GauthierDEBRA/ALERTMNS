@@ -34,6 +34,28 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import com.lowagie.text.Document;
+import com.lowagie.text.DocumentException;
+import com.lowagie.text.Element;
+import com.lowagie.text.FontFactory;
+import com.lowagie.text.PageSize;
+import com.lowagie.text.Paragraph;
+import com.lowagie.text.Phrase;
+import com.lowagie.text.pdf.PdfPCell;
+import com.lowagie.text.pdf.PdfPTable;
+import com.lowagie.text.pdf.PdfWriter;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.time.format.DateTimeFormatter;
 
 @Service
 @RequiredArgsConstructor
@@ -267,6 +289,19 @@ public class MessageService {
         };
     }
 
+    @Transactional(readOnly = true)
+    public byte[] exportConversationBinary(Long canalId, String format, Long requesterUserId) {
+        assertUserCanAccessCanal(canalId, requesterUserId);
+        List<Message> messages = messageRepository.findByIdCanalOrderByDateEnvoi(canalId);
+        List<MessageDto> dtos = messages.stream().map(this::toDto).collect(Collectors.toList());
+
+        return switch (format.toLowerCase()) {
+            case "pdf" -> exportAsPdf(dtos, canalId);
+            case "xlsx" -> exportAsXlsx(dtos);
+            default -> throw new RuntimeException("Format binaire non supporte: " + format);
+        };
+    }
+
     public void assertUserCanAccessCanal(Long canalId, Long userId) {
         if (!canalRepository.existsById(canalId)) {
             throw new RuntimeException("Canal non trouve: " + canalId);
@@ -450,6 +485,112 @@ public class MessageService {
         }
         sb.append("</conversation>");
         return sb.toString();
+    }
+
+    private byte[] exportAsXlsx(List<MessageDto> messages) {
+        try (XSSFWorkbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("Conversation");
+
+            CellStyle headerStyle = workbook.createCellStyle();
+            Font font = workbook.createFont();
+            font.setBold(true);
+            font.setColor(IndexedColors.WHITE.getIndex());
+            headerStyle.setFont(font);
+            headerStyle.setFillForegroundColor(IndexedColors.DARK_BLUE.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            headerStyle.setAlignment(HorizontalAlignment.CENTER);
+
+            String[] headers = {"ID", "Date", "Auteur", "Message"};
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            int rowIdx = 1;
+            for (MessageDto m : messages) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(m.getIdMessage() != null ? m.getIdMessage() : 0);
+                row.createCell(1).setCellValue(m.getDateEnvoi() != null ? fmt.format(m.getDateEnvoi()) : "");
+                String auteur = ((m.getUserPrenom() != null ? m.getUserPrenom() : "") + " "
+                        + (m.getUserNom() != null ? m.getUserNom() : "")).trim();
+                row.createCell(2).setCellValue(auteur);
+                row.createCell(3).setCellValue(m.getContenu() != null ? m.getContenu() : "");
+            }
+
+            sheet.autoSizeColumn(0);
+            sheet.autoSizeColumn(1);
+            sheet.autoSizeColumn(2);
+            sheet.setColumnWidth(3, 15000);
+
+            workbook.write(out);
+            return out.toByteArray();
+        } catch (IOException e) {
+            throw new RuntimeException("Impossible de générer le fichier XLSX", e);
+        }
+    }
+
+    private byte[] exportAsPdf(List<MessageDto> messages, Long canalId) {
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Document document = new Document(PageSize.A4, 36, 36, 36, 36);
+            PdfWriter.getInstance(document, out);
+            document.open();
+
+            Paragraph title = new Paragraph("Export conversation — canal #" + canalId,
+                    FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16));
+            title.setAlignment(Element.ALIGN_CENTER);
+            title.setSpacingAfter(8f);
+            document.add(title);
+
+            Paragraph subtitle = new Paragraph(messages.size() + " message(s)",
+                    FontFactory.getFont(FontFactory.HELVETICA, 10));
+            subtitle.setAlignment(Element.ALIGN_CENTER);
+            subtitle.setSpacingAfter(14f);
+            document.add(subtitle);
+
+            PdfPTable table = new PdfPTable(new float[]{1f, 2f, 2.5f, 6f});
+            table.setWidthPercentage(100f);
+            table.setHeaderRows(1);
+
+            for (String h : new String[]{"ID", "Date", "Auteur", "Message"}) {
+                PdfPCell cell = new PdfPCell(new Phrase(h,
+                        FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10)));
+                cell.setBackgroundColor(new java.awt.Color(30, 64, 175));
+                cell.setPadding(5f);
+                table.addCell(cell);
+            }
+
+            for (MessageDto m : messages) {
+                table.addCell(new Phrase(String.valueOf(m.getIdMessage() != null ? m.getIdMessage() : ""),
+                        FontFactory.getFont(FontFactory.HELVETICA, 9)));
+                table.addCell(new Phrase(m.getDateEnvoi() != null ? fmt.format(m.getDateEnvoi()) : "",
+                        FontFactory.getFont(FontFactory.HELVETICA, 9)));
+                String auteur = ((m.getUserPrenom() != null ? m.getUserPrenom() : "") + " "
+                        + (m.getUserNom() != null ? m.getUserNom() : "")).trim();
+                table.addCell(new Phrase(auteur, FontFactory.getFont(FontFactory.HELVETICA, 9)));
+                String contenu = m.getContenu() != null ? m.getContenu() : "";
+                table.addCell(new Phrase(contenu.length() > 500 ? contenu.substring(0, 497) + "..." : contenu,
+                        FontFactory.getFont(FontFactory.HELVETICA, 9)));
+            }
+
+            document.add(table);
+
+            Paragraph footer = new Paragraph(
+                    "Généré le " + fmt.format(java.time.LocalDateTime.now()),
+                    FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 9));
+            footer.setSpacingBefore(12f);
+            footer.setAlignment(Element.ALIGN_RIGHT);
+            document.add(footer);
+
+            document.close();
+            return out.toByteArray();
+        } catch (DocumentException | IOException e) {
+            throw new RuntimeException("Impossible de générer le fichier PDF", e);
+        }
     }
 
     public MessageDto toDto(Message message) {
