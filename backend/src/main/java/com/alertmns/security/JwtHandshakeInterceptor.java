@@ -1,39 +1,38 @@
 package com.alertmns.security;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
-import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
 
-import java.util.List;
 import java.util.Map;
 
+/**
+ * Intercepteur de handshake WebSocket.
+ *
+ * L'authentification n'est PAS effectuée au niveau HTTP/handshake car les
+ * navigateurs ne peuvent pas ajouter d'en-têtes Authorization sur une
+ * connexion WebSocket native, et passer le JWT en query string expose le
+ * token dans les logs serveur, l'historique du navigateur et les en-têtes
+ * Referer.
+ *
+ * L'authentification est déléguée entièrement au niveau STOMP CONNECT via
+ * {@link WebSocketAuthChannelInterceptor}, qui lit l'en-tête
+ * {@code Authorization: Bearer <token>} du frame CONNECT.
+ */
 @Component
 public class JwtHandshakeInterceptor implements HandshakeInterceptor {
 
+    /** Clé d'attribut de session utilisée par JwtPrincipalHandshakeHandler (rétrocompatibilité). */
     public static final String WS_EMAIL_ATTRIBUTE = "wsEmail";
-
-    private final JwtUtil jwtUtil;
-
-    public JwtHandshakeInterceptor(JwtUtil jwtUtil) {
-        this.jwtUtil = jwtUtil;
-    }
 
     @Override
     public boolean beforeHandshake(ServerHttpRequest request,
                                    ServerHttpResponse response,
                                    WebSocketHandler wsHandler,
                                    Map<String, Object> attributes) {
-        String token = extractToken(request);
-        if (token == null || !jwtUtil.isTokenValid(token)) {
-            response.setStatusCode(HttpStatus.UNAUTHORIZED);
-            return false;
-        }
-
-        attributes.put(WS_EMAIL_ATTRIBUTE, jwtUtil.extractEmail(token));
+        // Handshake toujours autorisé — l'auth JWT se fait dans WebSocketAuthChannelInterceptor.
         return true;
     }
 
@@ -43,35 +42,5 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
                                WebSocketHandler wsHandler,
                                Exception exception) {
         // no-op
-    }
-
-    private String extractToken(ServerHttpRequest request) {
-        String authHeader = request.getHeaders().getFirst("Authorization");
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            return authHeader.substring(7).trim();
-        }
-
-        if (request instanceof ServletServerHttpRequest servletRequest) {
-            String queryToken = servletRequest.getServletRequest().getParameter("token");
-            if (queryToken != null && !queryToken.isBlank()) {
-                return queryToken.trim();
-            }
-
-            String accessToken = servletRequest.getServletRequest().getParameter("access_token");
-            if (accessToken != null && !accessToken.isBlank()) {
-                return accessToken.trim();
-            }
-        }
-
-        List<String> tokenParams = request.getURI().getQuery() != null
-                ? List.of(request.getURI().getQuery().split("&"))
-                : List.of();
-        for (String param : tokenParams) {
-            if (param.startsWith("token=") && param.length() > 6) {
-                return param.substring(6);
-            }
-        }
-
-        return null;
     }
 }
