@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import api from '../api/axios.js'
 import { setToken, clearToken } from '../utils/tokenStore.js'
 
+let initAuthPromise = null
+
 function normalizeUserPayload(data, fallbackEmail = '') {
   if (!data) return null
 
@@ -28,7 +30,8 @@ export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
     token: null,
-    isAuthenticated: false
+    isAuthenticated: false,
+    isReady: false
   }),
 
   getters: {
@@ -74,26 +77,37 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async initAuth() {
-      const userStr = localStorage.getItem('user')
-      try {
-        const response = await api.post('/auth/refresh', {})
-        const data = response.data
-        setToken(data.token)
-        this.token = data.token
-        this.user = normalizeUserPayload(data, data.email ?? '')
-        this.isAuthenticated = true
-        localStorage.setItem('user', JSON.stringify(this.user))
-      } catch {
-        // Pas de cookie de refresh valide → non connecté
-        clearToken()
-        this.token = null
-        this.isAuthenticated = false
-        if (userStr) {
-          // Conserver les infos affichables (nom, role) pour l'écran de login
-          try { this.user = normalizeUserPayload(JSON.parse(userStr)) } catch { this.user = null }
-        }
-        localStorage.removeItem('user')
+      if (initAuthPromise) {
+        return initAuthPromise
       }
+
+      const userStr = localStorage.getItem('user')
+      initAuthPromise = (async () => {
+        try {
+          const response = await api.post('/auth/refresh', {})
+          const data = response.data
+          setToken(data.token)
+          this.token = data.token
+          this.user = normalizeUserPayload(data, data.email ?? '')
+          this.isAuthenticated = true
+          localStorage.setItem('user', JSON.stringify(this.user))
+        } catch {
+          // Pas de cookie de refresh valide → non connecté
+          clearToken()
+          this.token = null
+          this.isAuthenticated = false
+          if (userStr) {
+            // Conserver les infos affichables (nom, role) pour l'écran de login
+            try { this.user = normalizeUserPayload(JSON.parse(userStr)) } catch { this.user = null }
+          }
+          localStorage.removeItem('user')
+        } finally {
+          this.isReady = true
+          initAuthPromise = null
+        }
+      })()
+
+      return initAuthPromise
     },
 
     loadFromStorage() {

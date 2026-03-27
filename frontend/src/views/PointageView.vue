@@ -128,7 +128,15 @@
           <div v-for="user in presentUsers" :key="user.idUser" class="present-tile">
             <div class="tile-avatar-wrap">
               <div class="tile-avatar" :style="{ background: getAvatarColor(user) }">
-                {{ `${user.prenom?.[0] || ''}${user.nom?.[0] || ''}`.toUpperCase() }}
+                <img
+                  v-if="user.avatarUrl"
+                  :src="user.avatarUrl"
+                  :alt="`${user.prenom} ${user.nom}`"
+                  class="tile-avatar-image"
+                />
+                <template v-else>
+                  {{ getAvatarInitials(user) }}
+                </template>
               </div>
               <span class="tile-online-dot"></span>
             </div>
@@ -156,7 +164,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import NotificationPanel from '../components/NotificationPanel.vue'
 import api from '../api/axios.js'
 import { useAuthStore } from '../stores/auth.js'
-import { getAvatarColor } from '../utils/avatar.js'
+import { getAvatarColor, getAvatarInitials } from '../utils/avatar.js'
 import { useToast } from '../composables/useToast.js'
 
 const authStore = useAuthStore()
@@ -669,6 +677,14 @@ onUnmounted(() => {
   font-size: 18px;
   font-weight: 700;
   color: white;
+  overflow: hidden;
+}
+
+.tile-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .tile-online-dot {
