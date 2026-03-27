@@ -54,6 +54,7 @@ public class SecurityConfig {
                 .requestMatchers(AntPathRequestMatcher.antMatcher("/api/auth/logout")).permitAll()
                 .requestMatchers(AntPathRequestMatcher.antMatcher("/api/auth/forgot-password")).permitAll()
                 .requestMatchers(AntPathRequestMatcher.antMatcher("/api/auth/reset-password")).permitAll()
+                .requestMatchers(AntPathRequestMatcher.antMatcher("/api/health")).permitAll()
                 .requestMatchers(AntPathRequestMatcher.antMatcher("/ws/**")).permitAll()
                 .requestMatchers(AntPathRequestMatcher.antMatcher("/uploads/**")).permitAll()
                 .requestMatchers(AntPathRequestMatcher.antMatcher("/error")).permitAll()
