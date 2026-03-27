@@ -223,6 +223,22 @@ CREATE TABLE t_refresh_token (
     ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB COMMENT='Refresh tokens persistés pour les sessions longues';
 
+-- ============================================================
+--  11d. t_password_reset_token
+-- ============================================================
+CREATE TABLE t_password_reset_token (
+  id_prt     BIGINT      NOT NULL AUTO_INCREMENT,
+  token      VARCHAR(64) NOT NULL,
+  expires_at DATETIME    NOT NULL,
+  used_at    DATETIME    NULL,
+  id_user    BIGINT      NOT NULL,
+  PRIMARY KEY (id_prt),
+  UNIQUE KEY uk_prt_token (token),
+  CONSTRAINT fk_prt_user
+    FOREIGN KEY (id_user) REFERENCES t_utilisateur(id_user)
+    ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB COMMENT='Tokens de réinitialisation de mot de passe';
+
 
 -- ============================================================
 --  12. t_participant_reunion  (association participe)
@@ -275,6 +291,7 @@ CREATE INDEX idx_pointage_user_fin ON t_pointage(id_user, date_fin);
 CREATE INDEX idx_notif_user_notif ON t_notification(id_user, id_notif);
 CREATE INDEX idx_notif_user_lu_notif ON t_notification(id_user, is_lu, id_notif);
 CREATE INDEX idx_refresh_token_user ON t_refresh_token(id_user, expires_at);
+CREATE INDEX idx_prt_user ON t_password_reset_token(id_user);
 CREATE INDEX idx_reunion_createur ON t_reunion(id_createur);
 CREATE INDEX idx_reunion_date     ON t_reunion(date_prevue);
 CREATE INDEX idx_pr_user_reunion  ON t_participant_reunion(id_user, id_reunion);

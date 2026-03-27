@@ -101,8 +101,12 @@ const router = createRouter({
   scrollBehavior: () => ({ top: 0 })
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
+
+  if (!authStore.isReady) {
+    await authStore.initAuth()
+  }
 
   const requiresAuth = to.matched.some(r => r.meta.requiresAuth !== false)
   const isLoginPage = to.path === '/login'

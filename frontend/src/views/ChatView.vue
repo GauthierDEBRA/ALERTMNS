@@ -470,7 +470,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router'
 import { useChannelsStore } from '../stores/channels.js'
 import { useMessagesStore } from '../stores/messages.js'
 import { useAuthStore } from '../stores/auth.js'
@@ -487,6 +487,7 @@ const messagesStore = useMessagesStore()
 const authStore = useAuthStore()
 const { subscribe, unsubscribe, subscribeToTyping, unsubscribeTyping, sendTyping, connect } = useWebSocket()
 const { formatDate, isSameDay, formatDayHeader } = useDate()
+const DRAFT_STORAGE_KEY = 'alertmns.chatDrafts'
 
 const messagesContainer = ref(null)
 const topSentinel = ref(null)
@@ -526,6 +527,46 @@ const mobileMenuMessageId = ref(null)
 const typingUsers = ref({})
 const typingTimers = new Map()
 const lastTypingSentAt = ref(0)
+const draftChannelId = ref(null)
+
+function readDraftMap() {
+  try {
+    return JSON.parse(localStorage.getItem(DRAFT_STORAGE_KEY) || '{}')
+  } catch {
+    return {}
+  }
+}
+
+function writeDraftMap(drafts) {
+  try {
+    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(drafts))
+  } catch {
+    // Ignore storage failures in private mode or restricted contexts.
+  }
+}
+
+function saveDraft(channelId, value) {
+  if (!channelId) return
+  const drafts = readDraftMap()
+  if (value && value.trim().length > 0) {
+    drafts[String(channelId)] = value
+  } else {
+    delete drafts[String(channelId)]
+  }
+  writeDraftMap(drafts)
+}
+
+function restoreDraft(channelId) {
+  if (!channelId) {
+    draftChannelId.value = null
+    messageText.value = ''
+    return
+  }
+  const drafts = readDraftMap()
+  draftChannelId.value = channelId
+  messageText.value = drafts[String(channelId)] || ''
+  nextTick(() => autoResize())
+}
 
 const canalId = computed(() => {
   const parsed = Number(route.params.id)
@@ -718,6 +759,7 @@ function handleFileSelect(event) {
 
 function handleComposerInput() {
   autoResize()
+  saveDraft(canalId.value, messageText.value)
   notifyTyping()
 }
 
@@ -930,6 +972,7 @@ async function sendMessage() {
   }
 
   messageText.value = ''
+  saveDraft(canalId.value, '')
   removePendingFile()
   uploadProgress.value = 0
   if (textInput.value) {
@@ -1046,12 +1089,16 @@ async function initChannel(id) {
   confirmDeleteMessageId.value = null
   mobileMenuMessageId.value = null
   syncQueryState()
+  restoreDraft(id)
   channelsStore.setActiveChannel(id)
   const loadedMessages = await messagesStore.fetchMessages(id)
   const lastMessageId = loadedMessages.at(-1)?.id
   messagesStore.markAsRead(id, lastMessageId)
   await loadMembers()
   await loadAllUsers()
+  // Restore again after async data loading. In practice, some route transitions
+  // can briefly remount/update the input area after the initial restore.
+  restoreDraft(id)
   if (highlightedMessageId.value) {
     await scrollToMessage(highlightedMessageId.value)
   } else {
@@ -1060,6 +1107,7 @@ async function initChannel(id) {
 
   // Démarrer l'observer de scroll infini une fois que le DOM est prêt
   await nextTick()
+  restoreDraft(id)
   setupTopObserver()
 
   // Subscribe to WebSocket
@@ -1075,16 +1123,26 @@ async function initChannel(id) {
 }
 
 watch(() => route.params.id, async (newId, oldId) => {
-  if (newId) {
-    const nextId = Number(newId)
-    const previousId = Number(oldId)
-    if (Number.isInteger(previousId) && previousId > 0 && previousId !== nextId) {
-      unsubscribe(previousId)
-      unsubscribeTyping(previousId)
-    }
-    await initChannel(Number.isInteger(nextId) && nextId > 0 ? nextId : null)
+  const nextId = Number(newId)
+  const previousId = Number(oldId)
+  if (Number.isInteger(previousId) && previousId > 0) {
+    saveDraft(previousId, messageText.value)
+  }
+  if (Number.isInteger(previousId) && previousId > 0 && previousId !== nextId) {
+    unsubscribe(previousId)
+    unsubscribeTyping(previousId)
+  }
+  if (Number.isInteger(nextId) && nextId > 0) {
+    await initChannel(nextId)
   }
 }, { immediate: false })
+
+watch(
+  messageText,
+  (currentMessage) => {
+    saveDraft(draftChannelId.value, currentMessage)
+  }
+)
 
 watch(
   () => route.query,
@@ -1120,7 +1178,19 @@ onMounted(async () => {
   document.addEventListener('keydown', handleGlobalKeydown)
 })
 
+onBeforeRouteUpdate((to, from) => {
+  const previousId = Number(from.params.id)
+  if (Number.isInteger(previousId) && previousId > 0) {
+    saveDraft(previousId, messageText.value)
+  }
+})
+
+onBeforeRouteLeave(() => {
+  saveDraft(canalId.value, messageText.value)
+})
+
 onUnmounted(() => {
+  saveDraft(draftChannelId.value, messageText.value)
   if (topObserver) topObserver.disconnect()
   unsubscribe(canalId.value)
   unsubscribeTyping(canalId.value)
