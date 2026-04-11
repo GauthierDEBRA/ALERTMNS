@@ -415,6 +415,57 @@ document.addEventListener("DOMContentLoaded", () => {
     obs.observe(chartEl);
   }
 
+  // ===== SCROLL REVEAL =====
+  const revealObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add("visible");
+        revealObs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: "0px 0px -60px 0px" });
+  document.querySelectorAll(".section-header, .card, .player-card, .match-card, .trophy-card, .news-card, .scorer-row, .season-chart, .predict-card, .formation-pitch, .big-number").forEach(el => {
+    el.classList.add("reveal");
+    revealObs.observe(el);
+  });
+
+  // ===== STICKY NAV shadow on scroll =====
+  const header = document.querySelector(".header");
+  if (header) {
+    const onScroll = () => header.classList.toggle("scrolled", window.scrollY > 40);
+    window.addEventListener("scroll", onScroll);
+    onScroll();
+  }
+
+  // ===== SECTION HEADERS — auto-inject eyebrow + data-num =====
+  const sectionHeaders = document.querySelectorAll(".section-header");
+  sectionHeaders.forEach((sh, i) => {
+    const n = String(i + 1).padStart(2, "0");
+    sh.setAttribute("data-num", n);
+    const firstDiv = sh.querySelector("div");
+    if (firstDiv && !firstDiv.querySelector(".eyebrow")) {
+      const eye = document.createElement("span");
+      eye.className = "eyebrow";
+      const titles = ["Ici c'est Paris", "Paris Saint-Germain", "Rouge et Bleu", "Édition 2025-26", "Les Parisiens", "Histoire & Gloire"];
+      eye.textContent = titles[i % titles.length];
+      firstDiv.insertBefore(eye, firstDiv.firstChild);
+    }
+  });
+
+  // ===== PLAYER CARDS — inject data-pos attribute =====
+  document.querySelectorAll(".player-card").forEach(card => {
+    const posEl = card.querySelector(".player-pos");
+    if (posEl) {
+      const txt = posEl.textContent.trim().toUpperCase();
+      let key = "MID";
+      if (txt.includes("GARDIEN") || txt.includes("GK")) key = "GK";
+      else if (txt.includes("DÉFEN") || txt.includes("DEF")) key = "DEF";
+      else if (txt.includes("ATTAQ") || txt.includes("FWD") || txt.includes("AILI")) key = "FWD";
+      else if (txt.includes("MILIEU") || txt.includes("MID")) key = "MID";
+      card.setAttribute("data-pos", key);
+    }
+  });
+
   // 3D tilt on player cards
   const bindTilt = card => {
     card.addEventListener("mousemove", e => {
