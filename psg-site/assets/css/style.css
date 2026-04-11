@@ -3561,3 +3561,377 @@ td.rank {
   cursor: pointer;
   border: none;
 }
+
+/* =========================================================
+   ✨ VISUAL WOW LAYER — Dramatic effects
+   ========================================================= */
+
+/* ---------- SPOTLIGHT CURSOR ---------- */
+.spotlight {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9994;
+  background: radial-gradient(circle 400px at var(--mx, 50%) var(--my, 50%),
+    rgba(212, 175, 55, 0.12),
+    rgba(227, 6, 19, 0.04) 30%,
+    transparent 60%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  transition: opacity 0.6s var(--ease);
+}
+.spotlight.visible { opacity: 1; }
+@media (hover: none), (prefers-reduced-motion: reduce) {
+  .spotlight { display: none; }
+}
+
+/* ---------- ANIMATED CONIC BACKDROP ---------- */
+.hero-conic {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 140vmax;
+  height: 140vmax;
+  transform: translate(-50%, -50%);
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(227, 6, 19, 0.18) 40deg,
+    transparent 80deg,
+    transparent 180deg,
+    rgba(212, 175, 55, 0.18) 220deg,
+    transparent 260deg,
+    transparent 360deg
+  );
+  animation: conicSpin 30s linear infinite;
+  z-index: 1;
+  pointer-events: none;
+  filter: blur(60px);
+  opacity: 0.85;
+}
+@keyframes conicSpin {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-conic { animation: none; }
+}
+
+/* ---------- SPOTLIGHT BEAM (top) ---------- */
+.hero-spot {
+  position: absolute;
+  top: -20%;
+  left: 50%;
+  width: 700px;
+  height: 800px;
+  transform: translateX(-50%) rotate(3deg);
+  background: radial-gradient(ellipse at top, rgba(255, 255, 255, 0.2), rgba(212, 175, 55, 0.08) 40%, transparent 70%);
+  z-index: 2;
+  pointer-events: none;
+  filter: blur(2px);
+  animation: spotSway 8s ease-in-out infinite;
+}
+@keyframes spotSway {
+  0%, 100% { transform: translateX(-50%) rotate(3deg); }
+  50% { transform: translateX(-50%) rotate(-3deg); }
+}
+
+/* ---------- PARC DES PRINCES SILHOUETTE ---------- */
+.hero-stadium {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 45%;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.55;
+  filter: drop-shadow(0 -10px 30px rgba(0,0,0,0.5));
+}
+
+/* ---------- GOLD FOIL SHIMMER TEXT ---------- */
+.shine-text,
+.hero-title {
+  background: linear-gradient(
+    110deg,
+    #ffffff 0%,
+    #ffffff 30%,
+    #f5e59a 45%,
+    #d4af37 50%,
+    #f5e59a 55%,
+    #ffffff 70%,
+    #ffffff 100%
+  ) !important;
+  background-size: 300% 100% !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+  animation: shimmer 5s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0%, 100% { background-position: 100% 50%; }
+  50% { background-position: 0% 50%; }
+}
+
+/* ---------- NEON RED PULSE ---------- */
+.neon-red,
+.hero-eyebrow::before {
+  box-shadow:
+    0 0 6px var(--red-hot),
+    0 0 12px var(--red-hot),
+    0 0 24px rgba(227, 6, 19, 0.6),
+    0 0 48px rgba(227, 6, 19, 0.4) !important;
+  animation: neonPulse 2s ease-in-out infinite !important;
+}
+@keyframes neonPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 6px var(--red-hot),
+      0 0 12px var(--red-hot),
+      0 0 24px rgba(227, 6, 19, 0.6),
+      0 0 48px rgba(227, 6, 19, 0.4);
+  }
+  50% {
+    box-shadow:
+      0 0 10px var(--red-hot),
+      0 0 20px var(--red-hot),
+      0 0 40px rgba(227, 6, 19, 0.9),
+      0 0 80px rgba(227, 6, 19, 0.6);
+  }
+}
+
+/* ---------- ORBIT BADGES around hero title ---------- */
+.orbit-badges {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 1000px;
+  height: 1000px;
+  pointer-events: none;
+  z-index: 4;
+}
+.orbit-badge {
+  position: absolute;
+  padding: 0.7rem 1.1rem;
+  background: rgba(6, 9, 26, 0.6);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 14px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  box-shadow: 0 20px 40px rgba(6, 9, 26, 0.5);
+  animation: orbitFloat 6s ease-in-out infinite;
+}
+.orbit-badge::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--gold), transparent 40%, transparent 60%, var(--red-hot));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.orbit-badge .ob-val {
+  font-family: var(--font-impact);
+  font-size: 1.8rem;
+  line-height: 1;
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.orbit-badge .ob-lbl {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: rgba(255,255,255,0.7);
+  font-weight: 700;
+}
+.orbit-badge.b1 { top: 12%; left: 8%; animation-delay: 0s; }
+.orbit-badge.b2 { top: 18%; right: 6%; animation-delay: 1.5s; }
+.orbit-badge.b3 { bottom: 28%; left: 4%; animation-delay: 3s; }
+.orbit-badge.b4 { bottom: 20%; right: 10%; animation-delay: 4.5s; }
+@keyframes orbitFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+@media (max-width: 968px) {
+  .orbit-badges { display: none; }
+}
+
+/* ---------- HOLOGRAPHIC PLAYER CARDS ---------- */
+.player-card {
+  transform-style: preserve-3d;
+}
+.player-card::before {
+  background:
+    linear-gradient(
+      105deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.15) 42%,
+      rgba(255, 0, 140, 0.18) 46%,
+      rgba(0, 180, 255, 0.18) 50%,
+      rgba(140, 255, 0, 0.18) 54%,
+      rgba(255, 200, 0, 0.18) 58%,
+      transparent 70%
+    ),
+    radial-gradient(circle at 70% 20%, rgba(212, 175, 55, 0.25), transparent 50%),
+    repeating-linear-gradient(-45deg, transparent 0 14px, rgba(255,255,255,0.03) 14px 15px) !important;
+  background-size: 200% 200%, 100% 100%, 100% 100% !important;
+  background-position: -100% -100%, 0 0, 0 0 !important;
+  transition: background-position 0.6s var(--ease) !important;
+}
+.player-card:hover::before {
+  background-position: 100% 100%, 0 0, 0 0 !important;
+}
+
+/* ---------- BLOB DECORATIONS ---------- */
+.blob {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.4;
+  z-index: 0;
+  pointer-events: none;
+  animation: blobFloat 20s ease-in-out infinite;
+}
+.blob.b-red {
+  background: var(--red-hot);
+  top: 10%;
+  left: -10%;
+}
+.blob.b-gold {
+  background: var(--gold);
+  bottom: 20%;
+  right: -15%;
+  animation-delay: 5s;
+}
+.blob.b-navy {
+  background: var(--navy-soft);
+  top: 60%;
+  left: 40%;
+  animation-delay: 10s;
+}
+@keyframes blobFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(60px, -40px) scale(1.1); }
+  66% { transform: translate(-40px, 50px) scale(0.95); }
+}
+.section > .container { position: relative; z-index: 2; }
+.section { overflow: hidden; }
+
+/* ---------- ANIMATED GRADIENT BORDER ---------- */
+.grad-border {
+  position: relative;
+}
+.grad-border::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--a, 0deg),
+    var(--red-hot),
+    var(--gold),
+    var(--navy-soft),
+    var(--red-hot)
+  );
+  z-index: -1;
+  animation: gradBorder 6s linear infinite;
+}
+@property --a {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes gradBorder {
+  to { --a: 360deg; }
+}
+
+/* ---------- MEGA WATERMARK ---------- */
+.section-header::before {
+  font-size: clamp(10rem, 22vw, 20rem) !important;
+  color: transparent !important;
+  -webkit-text-stroke: 2px rgba(0, 37, 71, 0.07);
+  font-weight: 700 !important;
+}
+
+/* ---------- BIG NUMBER GLOW ---------- */
+.big-number {
+  text-shadow:
+    0 0 30px rgba(227, 6, 19, 0.2),
+    0 0 60px rgba(212, 175, 55, 0.1);
+  filter: drop-shadow(0 4px 20px rgba(0, 37, 71, 0.15));
+}
+
+/* ---------- SECTION TITLES SHINE ---------- */
+.section-title {
+  background: linear-gradient(
+    110deg,
+    var(--ink) 0%,
+    var(--ink) 30%,
+    var(--red-hot) 45%,
+    var(--navy) 55%,
+    var(--ink) 70%,
+    var(--ink) 100%
+  ) !important;
+  background-size: 300% 100% !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  animation: shimmer 8s ease-in-out infinite;
+}
+
+/* ---------- TROPHY MEGA GLOW ---------- */
+.trophy-card::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200px;
+  height: 200px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.4), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.6s var(--ease);
+  pointer-events: none;
+  z-index: 0;
+}
+.trophy-card:hover::after { opacity: 1; }
+.trophy-card > * { position: relative; z-index: 1; }
+
+/* ---------- SCORE NEON ---------- */
+.score {
+  text-shadow:
+    0 0 20px rgba(227, 6, 19, 0.3),
+    0 0 40px rgba(227, 6, 19, 0.15);
+}
+
+/* ---------- DARK THEME BOOST ---------- */
+body.dark-theme {
+  background: #050715 !important;
+}
+body.dark-theme .blob { opacity: 0.25; }
+body.dark-theme .section:nth-of-type(even) {
+  background: linear-gradient(180deg, #0a0f1f, #06091a) !important;
+}
+body.dark-theme .section-title {
+  background: linear-gradient(110deg, #fff 0%, #fff 30%, var(--red-hot) 45%, var(--gold) 55%, #fff 70%, #fff 100%) !important;
+  background-size: 300% 100% !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+body.dark-theme .section-header::before {
+  -webkit-text-stroke: 2px rgba(212, 175, 55, 0.08);
+}

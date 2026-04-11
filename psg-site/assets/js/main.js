@@ -1268,3 +1268,118 @@ window.playGoalReplay = playGoalReplay;
     }
   }
 })();
+
+/* =========================================================
+   ✨ VISUAL WOW LAYER INJECTIONS
+   ========================================================= */
+(function () {
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ===== SPOTLIGHT CURSOR =====
+  if (!reduced && window.matchMedia("(hover:hover)").matches) {
+    const spot = document.createElement("div");
+    spot.className = "spotlight";
+    document.body.appendChild(spot);
+    document.addEventListener("mousemove", e => {
+      spot.classList.add("visible");
+      spot.style.setProperty("--mx", e.clientX + "px");
+      spot.style.setProperty("--my", e.clientY + "px");
+    });
+    document.addEventListener("mouseleave", () => spot.classList.remove("visible"));
+  }
+
+  // ===== HERO LAYERS: conic, spot, stadium, orbit =====
+  const hero = document.querySelector(".hero");
+  if (hero) {
+    // Conic gradient animated backdrop
+    if (!hero.querySelector(".hero-conic") && !reduced) {
+      const conic = document.createElement("div");
+      conic.className = "hero-conic";
+      hero.insertBefore(conic, hero.firstChild);
+    }
+    // Top spotlight beam
+    if (!hero.querySelector(".hero-spot")) {
+      const spot = document.createElement("div");
+      spot.className = "hero-spot";
+      hero.insertBefore(spot, hero.firstChild);
+    }
+    // Parc des Princes silhouette SVG
+    if (!hero.querySelector(".hero-stadium")) {
+      const stadium = document.createElement("div");
+      stadium.className = "hero-stadium";
+      stadium.innerHTML = `
+        <svg viewBox="0 0 1600 400" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+          <defs>
+            <linearGradient id="stadGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#06091a"/>
+              <stop offset="1" stop-color="#000"/>
+            </linearGradient>
+            <radialGradient id="fieldGlow" cx="50%" cy="100%" r="50%">
+              <stop offset="0" stop-color="rgba(212,175,55,0.5)"/>
+              <stop offset="1" stop-color="transparent"/>
+            </radialGradient>
+          </defs>
+          <!-- Crowd/tribunes silhouette -->
+          <path d="M0,400 L0,260 Q60,240 120,255 L150,230 Q220,200 290,220 L310,200 Q380,175 460,195 L490,170 Q580,145 680,165 L720,135 Q810,115 910,135 L940,115 Q1030,95 1130,115 L1170,90 Q1260,75 1350,95 L1380,115 Q1450,135 1520,125 L1600,135 L1600,400 Z" fill="url(#stadGrad)"/>
+          <!-- Stadium roof lines -->
+          <path d="M0,260 Q200,240 400,260 Q600,240 800,260 Q1000,240 1200,260 Q1400,240 1600,260" stroke="rgba(212,175,55,0.3)" stroke-width="1.5" fill="none"/>
+          <path d="M100,230 Q300,215 500,230 Q700,215 900,230 Q1100,215 1300,230 Q1500,215 1600,225" stroke="rgba(212,175,55,0.18)" stroke-width="1" fill="none"/>
+          <!-- Stadium lights -->
+          ${[200, 400, 600, 800, 1000, 1200, 1400].map(x => `
+            <circle cx="${x}" cy="195" r="3" fill="#fff" opacity="0.9">
+              <animate attributeName="opacity" values="0.7;1;0.7" dur="${2 + Math.random() * 2}s" repeatCount="indefinite"/>
+            </circle>
+            <circle cx="${x}" cy="195" r="8" fill="#fff" opacity="0.15"/>
+          `).join("")}
+          <!-- Crowd dots (animated) -->
+          ${Array.from({length: 80}, () => {
+            const x = Math.random() * 1600;
+            const y = 270 + Math.random() * 80;
+            return `<circle cx="${x}" cy="${y}" r="1.2" fill="rgba(255,255,255,0.35)"/>`;
+          }).join("")}
+          <!-- Field edge glow -->
+          <ellipse cx="800" cy="400" rx="900" ry="80" fill="url(#fieldGlow)"/>
+        </svg>`;
+      hero.appendChild(stadium);
+    }
+    // Orbit badges around title
+    if (!hero.querySelector(".orbit-badges") && window.innerWidth > 968) {
+      const orbit = document.createElement("div");
+      orbit.className = "orbit-badges";
+      orbit.innerHTML = `
+        <div class="orbit-badge b1"><span class="ob-val">13</span><span class="ob-lbl">Ligue 1</span></div>
+        <div class="orbit-badge b2"><span class="ob-val">15</span><span class="ob-lbl">Coupe de France</span></div>
+        <div class="orbit-badge b3"><span class="ob-val">1</span><span class="ob-lbl">Champions League</span></div>
+        <div class="orbit-badge b4"><span class="ob-val">12</span><span class="ob-lbl">Trophée Champions</span></div>`;
+      hero.appendChild(orbit);
+    }
+  }
+
+  // ===== BLOBS IN SECTIONS =====
+  document.querySelectorAll(".section").forEach((sec, i) => {
+    if (sec.querySelector(".blob")) return;
+    if (reduced) return;
+    const blobColors = ["b-red", "b-gold", "b-navy"];
+    const blob = document.createElement("div");
+    blob.className = "blob " + blobColors[i % 3];
+    sec.insertBefore(blob, sec.firstChild);
+  });
+
+  // ===== HOLO EFFECT on player cards (cursor-linked shimmer) =====
+  if (!reduced && window.matchMedia("(hover:hover)").matches) {
+    document.querySelectorAll(".player-card").forEach(card => {
+      card.addEventListener("mousemove", e => {
+        const r = card.getBoundingClientRect();
+        const x = ((e.clientX - r.left) / r.width) * 100;
+        const y = ((e.clientY - r.top) / r.height) * 100;
+        const before = card;
+        before.style.setProperty("--holo-x", x + "%");
+        before.style.setProperty("--holo-y", y + "%");
+        const before2 = card.querySelector("::before");
+        // Force update via background-position
+        const pseudo = card;
+        pseudo.style.backgroundPosition = `${x}% ${y}%`;
+      });
+    });
+  }
+})();
