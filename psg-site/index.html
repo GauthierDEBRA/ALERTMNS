@@ -8,10 +8,23 @@
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
+
+<div class="live-ticker">
+  <div class="live-ticker-inner">
+    <span><span class="live-ticker-dot"></span>EN DIRECT</span>
+    <span class="live-ticker-sep">|</span>
+    <span>PSG leader Ligue 1 · 76 pts · +56 de diff.</span>
+    <span class="live-ticker-sep">|</span>
+    <span>Ousmane Dembélé meilleur buteur · 24 ⚽</span>
+    <span class="live-ticker-sep">|</span>
+    <span>🏆 Champions d'Europe 2025</span>
+  </div>
+</div>
+
 <header class="site-header">
   <nav class="nav">
     <a href="index.html" class="nav-brand">
-      <div class="nav-logo">PSG</div>
+      <div class="nav-logo"></div>
       <span>Paris Fan Zone</span>
     </a>
     <ul class="nav-links">
@@ -28,15 +41,57 @@
 <section class="hero">
   <div class="hero-inner">
     <div>
-      <span class="hero-eyebrow">Saison 2025 / 2026</span>
+      <span class="hero-eyebrow">Saison 2025 / 2026 · Champions d'Europe</span>
       <h1 class="hero-title">Ici c'est <span>Paris</span></h1>
-      <p class="hero-sub">Bienvenue sur la fan zone officieuse du Paris Saint-Germain. Retrouvez l'effectif, les stats complètes, les matchs joués avec les actions de but commentées, et l'histoire glorieuse du club de la capitale.</p>
+      <p class="hero-sub">La fan zone ultime du Paris Saint-Germain. Effectif complet, stats en temps réel, actions de buts commentées minute par minute, formation tactique et toute l'histoire glorieuse du club de la capitale.</p>
       <div class="hero-cta">
-        <a href="players.html" class="btn btn-primary">Voir l'effectif</a>
-        <a href="matches.html" class="btn btn-outline">Derniers matchs</a>
+        <a href="players.html" class="btn btn-primary">⚡ Effectif complet</a>
+        <a href="matches.html" class="btn btn-outline">📊 Derniers matchs</a>
       </div>
+      <div class="hero-countdown" id="hero-countdown"></div>
     </div>
     <div class="hero-stats" id="hero-stats"></div>
+  </div>
+</section>
+
+<section class="big-numbers">
+  <div class="big-number">
+    <div class="big-number-value" data-count="78">0</div>
+    <div class="big-number-label">Buts marqués</div>
+  </div>
+  <div class="big-number">
+    <div class="big-number-value" data-count="24">0</div>
+    <div class="big-number-label">Victoires</div>
+  </div>
+  <div class="big-number">
+    <div class="big-number-value" data-count="65" data-suffix="%">0</div>
+    <div class="big-number-label">Possession moy.</div>
+  </div>
+  <div class="big-number">
+    <div class="big-number-value" data-count="76">0</div>
+    <div class="big-number-label">Points Ligue 1</div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-header">
+    <div>
+      <h2 class="section-title">Le onze type</h2>
+      <p class="section-intro">Le 4-3-3 fétiche de Luis Enrique avec le onze de départ qui domine l'Europe cette saison. Clique sur un joueur pour sa fiche.</p>
+    </div>
+  </div>
+  <div class="pitch-wrapper" id="pitch"></div>
+</section>
+
+<section class="trophy-showcase">
+  <div class="trophy-showcase-inner">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Vitrine des trophées</h2>
+        <p class="section-intro">Le palmarès du club le plus titré de France — et désormais champion d'Europe.</p>
+      </div>
+    </div>
+    <div class="trophy-grid" id="trophies"></div>
   </div>
 </section>
 
@@ -63,10 +118,18 @@
   </div>
 </section>
 
+<section class="cta-banner">
+  <div class="cta-banner-inner">
+    <h2>Allez Paris !</h2>
+    <p>Tu es un vrai supporter ? Explore toute la fiche de chaque joueur et deviens incollable sur tes Rouge et Bleu préférés.</p>
+    <a href="players.html" class="btn btn-primary">Découvrir l'effectif</a>
+  </div>
+</section>
+
 <footer class="site-footer">
   <div class="footer-inner">
     <div class="footer-brand">
-      <div class="nav-logo">PSG</div>
+      <div class="nav-logo"></div>
       <div>
         <h3>Paris Fan Zone</h3>
         <p>Site fan non officiel dédié au Paris Saint-Germain. Pour les passionnés, par les passionnés des Rouge et Bleu.</p>

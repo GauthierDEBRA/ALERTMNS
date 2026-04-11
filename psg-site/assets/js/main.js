@@ -5,6 +5,184 @@ document.addEventListener("DOMContentLoaded", () => {
   const links = document.querySelector(".nav-links");
   if (toggle && links) toggle.addEventListener("click", () => links.classList.toggle("open"));
 
+  // Inject animated crest SVG into all .nav-logo elements
+  const crestSvg = `
+    <svg class="crest-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="crestBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#0b5a94"/>
+          <stop offset="1" stop-color="#002547"/>
+        </linearGradient>
+        <linearGradient id="crestGold" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#f5e59a"/>
+          <stop offset="0.5" stop-color="#d4af37"/>
+          <stop offset="1" stop-color="#8a6d15"/>
+        </linearGradient>
+      </defs>
+      <circle cx="50" cy="50" r="47" fill="url(#crestBg)" stroke="url(#crestGold)" stroke-width="3"/>
+      <circle cx="50" cy="50" r="40" fill="none" stroke="#DA291C" stroke-width="2"/>
+      <path d="M25 35 L50 20 L75 35 L75 65 L50 80 L25 65 Z" fill="#DA291C" opacity="0.3"/>
+      <text x="50" y="44" text-anchor="middle" fill="#fff" font-family="Arial Black, sans-serif" font-weight="900" font-size="14" letter-spacing="1">PARIS</text>
+      <text x="50" y="60" text-anchor="middle" fill="#d4af37" font-family="Arial Black, sans-serif" font-weight="900" font-size="16" letter-spacing="2">SG</text>
+      <text x="50" y="73" text-anchor="middle" fill="#fff" font-family="Arial, sans-serif" font-weight="700" font-size="6" letter-spacing="1" opacity="0.85">EST. 1970</text>
+    </svg>`;
+  document.querySelectorAll(".nav-logo").forEach(el => { el.innerHTML = crestSvg; });
+
+  // Inject Eiffel tower SVG + particles into hero
+  const hero = document.querySelector(".hero");
+  if (hero) {
+    const eiffelSvg = `
+      <svg class="hero-bg-svg" viewBox="0 0 1400 500" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYEnd meet">
+        <g fill="#fff">
+          <!-- Eiffel Tower silhouette -->
+          <path d="M690 50 L710 50 L712 90 L716 130 L722 180 L700 180 L678 180 L684 130 L688 90 Z"/>
+          <path d="M678 180 L722 180 L730 240 L670 240 Z"/>
+          <path d="M660 240 L740 240 L755 320 L645 320 Z"/>
+          <path d="M635 320 L765 320 L790 430 L610 430 Z"/>
+          <rect x="600" y="430" width="200" height="10"/>
+          <!-- Base legs -->
+          <path d="M605 440 L640 440 L650 495 L585 495 Z" opacity="0.85"/>
+          <path d="M760 440 L795 440 L815 495 L750 495 Z" opacity="0.85"/>
+          <!-- Lattice lines -->
+          <g stroke="#fff" stroke-width="0.8" opacity="0.5" fill="none">
+            <line x1="684" y1="130" x2="716" y2="130"/>
+            <line x1="680" y1="150" x2="720" y2="150"/>
+            <line x1="678" y1="180" x2="722" y2="180"/>
+            <line x1="670" y1="210" x2="730" y2="210"/>
+            <line x1="660" y1="270" x2="740" y2="270"/>
+            <line x1="650" y1="300" x2="750" y2="300"/>
+            <line x1="635" y1="360" x2="765" y2="360"/>
+            <line x1="620" y1="395" x2="780" y2="395"/>
+          </g>
+          <!-- Skyline buildings -->
+          <rect x="50" y="400" width="80" height="95" opacity="0.35"/>
+          <rect x="135" y="370" width="60" height="125" opacity="0.35"/>
+          <rect x="200" y="420" width="50" height="75" opacity="0.35"/>
+          <rect x="255" y="385" width="90" height="110" opacity="0.35"/>
+          <rect x="350" y="405" width="70" height="90" opacity="0.35"/>
+          <rect x="425" y="390" width="60" height="105" opacity="0.35"/>
+          <rect x="490" y="415" width="90" height="80" opacity="0.35"/>
+          <rect x="830" y="410" width="70" height="85" opacity="0.35"/>
+          <rect x="905" y="385" width="60" height="110" opacity="0.35"/>
+          <rect x="970" y="400" width="80" height="95" opacity="0.35"/>
+          <rect x="1055" y="420" width="50" height="75" opacity="0.35"/>
+          <rect x="1110" y="380" width="90" height="115" opacity="0.35"/>
+          <rect x="1205" y="410" width="70" height="85" opacity="0.35"/>
+          <rect x="1280" y="395" width="60" height="100" opacity="0.35"/>
+        </g>
+      </svg>`;
+    hero.insertAdjacentHTML("afterbegin", eiffelSvg);
+
+    // Floating gold particles
+    const particles = document.createElement("div");
+    particles.className = "hero-particles";
+    for (let i = 0; i < 25; i++) {
+      const p = document.createElement("span");
+      p.style.left = Math.random() * 100 + "%";
+      p.style.bottom = "-10px";
+      p.style.animationDelay = (Math.random() * 12) + "s";
+      p.style.animationDuration = (10 + Math.random() * 8) + "s";
+      p.style.width = p.style.height = (2 + Math.random() * 4) + "px";
+      particles.appendChild(p);
+    }
+    hero.appendChild(particles);
+  }
+
+  // Countdown to next match
+  const countdownEl = document.getElementById("hero-countdown");
+  if (countdownEl) {
+    const next = PSG_DATA.matches.find(m => m.status === "upcoming");
+    if (next) {
+      // Parse French date "15 AVR 2026"
+      const months = { JAN:0,FEV:1,MAR:2,AVR:3,MAI:4,JUN:5,JUL:6,AOU:7,SEP:8,OCT:9,NOV:10,DEC:11 };
+      const [d, m, y] = next.date.split(" ");
+      const target = new Date(+y, months[m] || 0, +d, 21, 0, 0);
+      const render = () => {
+        const diff = target - new Date();
+        if (diff <= 0) { countdownEl.innerHTML = '<span class="countdown-intro">Match en cours !</span>'; return; }
+        const dd = Math.floor(diff / 86400000);
+        const hh = Math.floor((diff % 86400000) / 3600000);
+        const mm = Math.floor((diff % 3600000) / 60000);
+        const ss = Math.floor((diff % 60000) / 1000);
+        countdownEl.innerHTML = `
+          <div style="width:100%">
+            <span class="countdown-intro">⏱ Prochain match · ${next.home} vs ${next.away}</span>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+              <div class="countdown-unit"><div class="countdown-value">${dd}</div><div class="countdown-label">Jours</div></div>
+              <div class="countdown-unit"><div class="countdown-value">${String(hh).padStart(2,"0")}</div><div class="countdown-label">Heures</div></div>
+              <div class="countdown-unit"><div class="countdown-value">${String(mm).padStart(2,"0")}</div><div class="countdown-label">Min</div></div>
+              <div class="countdown-unit"><div class="countdown-value">${String(ss).padStart(2,"0")}</div><div class="countdown-label">Sec</div></div>
+            </div>
+          </div>`;
+      };
+      render();
+      setInterval(render, 1000);
+    }
+  }
+
+  // Animated counters (big-numbers)
+  const counters = document.querySelectorAll(".big-number-value[data-count]");
+  if (counters.length) {
+    const animate = el => {
+      const target = parseFloat(el.dataset.count);
+      const suffix = el.dataset.suffix || "";
+      const duration = 1600;
+      const start = performance.now();
+      const step = now => {
+        const progress = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const value = target * eased;
+        el.textContent = (Number.isInteger(target) ? Math.floor(value) : value.toFixed(1)) + suffix;
+        if (progress < 1) requestAnimationFrame(step);
+        else el.textContent = target + suffix;
+      };
+      requestAnimationFrame(step);
+    };
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { animate(e.target); obs.unobserve(e.target); } });
+    }, { threshold: 0.4 });
+    counters.forEach(c => obs.observe(c));
+  }
+
+  // Formation pitch render
+  const pitchEl = document.getElementById("pitch");
+  if (pitchEl && PSG_DATA.formation) {
+    const f = PSG_DATA.formation;
+    let html = `
+      <div class="pitch-formation-label">${f.label}</div>
+      <div class="pitch-coach-label">Coach · ${f.coach}</div>
+      <div class="pitch-lines"></div>
+      <div class="pitch-box pitch-box-top"></div>
+      <div class="pitch-box pitch-box-bot"></div>
+      <div class="pitch-box-small top"></div>
+      <div class="pitch-box-small bot"></div>
+    `;
+    f.xi.forEach(pl => {
+      const full = PSG_DATA.players.find(p => p.id === pl.id);
+      html += `
+        <div class="pitch-player" style="left:${pl.x}%;top:${pl.y}%" data-id="${pl.id}">
+          <div class="pitch-player-circle">${full?.num ?? "?"}</div>
+          <div class="pitch-player-name">${pl.short}</div>
+        </div>`;
+    });
+    pitchEl.innerHTML = html;
+    pitchEl.querySelectorAll(".pitch-player").forEach(p =>
+      p.addEventListener("click", () => openPlayerModal(+p.dataset.id))
+    );
+  }
+
+  // 3D tilt on player cards
+  const bindTilt = card => {
+    card.addEventListener("mousemove", e => {
+      const r = card.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - 0.5;
+      const y = (e.clientY - r.top) / r.height - 0.5;
+      card.style.transform = `translateY(-8px) perspective(900px) rotateY(${x * 12}deg) rotateX(${-y * 12}deg)`;
+    });
+    card.addEventListener("mouseleave", () => { card.style.transform = ""; });
+  };
+  // Will be applied after render in squad grid
+
   // Initiales joueurs
   const getInitials = (name) => name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
   const posLabels = { GK: "Gardien", DEF: "Défenseur", MID: "Milieu", FWD: "Attaquant" };
@@ -60,9 +238,10 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         </article>`).join("");
 
-      squadEl.querySelectorAll(".player-card").forEach(card =>
-        card.addEventListener("click", () => openPlayerModal(+card.dataset.id))
-      );
+      squadEl.querySelectorAll(".player-card").forEach(card => {
+        card.addEventListener("click", () => openPlayerModal(+card.dataset.id));
+        bindTilt(card);
+      });
     };
     renderSquad();
 

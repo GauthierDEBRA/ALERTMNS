@@ -3,6 +3,454 @@
    Couleurs officielles : Bleu marine #004170, Rouge #DA291C
    ========================================================= */
 
+/* ====== LIVE TICKER ====== */
+.live-ticker {
+  background: linear-gradient(90deg, #DA291C, #a81b11);
+  color: #fff;
+  padding: 0.6rem 1.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+  z-index: 101;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+.live-ticker-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+  animation: blink 1.2s infinite;
+  vertical-align: middle;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; box-shadow: 0 0 10px #fff; }
+  50% { opacity: 0.3; box-shadow: 0 0 0 #fff; }
+}
+.live-ticker-inner {
+  display: inline-flex;
+  gap: 1.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.live-ticker-sep {
+  opacity: 0.5;
+}
+
+/* ====== ANIMATED CREST SVG ====== */
+.crest-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
+}
+.nav-logo {
+  background: transparent !important;
+  border: none !important;
+  padding: 0;
+}
+.nav-logo svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ====== HERO EIFFEL BACKGROUND ====== */
+.hero {
+  position: relative;
+  overflow: hidden;
+}
+.hero-bg-svg {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1400px;
+  max-width: none;
+  opacity: 0.18;
+  pointer-events: none;
+  z-index: 0;
+}
+.hero-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.hero-particles span {
+  position: absolute;
+  display: block;
+  width: 4px;
+  height: 4px;
+  background: #d4af37;
+  border-radius: 50%;
+  opacity: 0.6;
+  box-shadow: 0 0 10px #d4af37;
+  animation: floatUp 12s infinite linear;
+}
+@keyframes floatUp {
+  0% { transform: translateY(0) scale(0); opacity: 0; }
+  10% { opacity: 0.7; }
+  90% { opacity: 0.7; }
+  100% { transform: translateY(-800px) scale(1); opacity: 0; }
+}
+
+/* Animated title glow */
+.hero-title {
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+}
+.hero-title span {
+  position: relative;
+  display: inline-block;
+  animation: goldGlow 3s ease-in-out infinite;
+}
+@keyframes goldGlow {
+  0%, 100% { filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.6)); }
+  50% { filter: drop-shadow(0 0 30px rgba(212, 175, 55, 0.9)); }
+}
+
+/* Countdown to next match in hero */
+.hero-countdown {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 2rem;
+}
+.countdown-unit {
+  min-width: 70px;
+  padding: 0.9rem 0.5rem;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 10px;
+  text-align: center;
+  backdrop-filter: blur(8px);
+}
+.countdown-value {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #d4af37;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.countdown-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  opacity: 0.85;
+  letter-spacing: 1px;
+  margin-top: 0.3rem;
+}
+.countdown-intro {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  opacity: 0.8;
+  margin-bottom: 0.6rem;
+  color: #d4af37;
+  font-weight: 700;
+}
+
+/* ====== FORMATION PITCH ====== */
+.pitch-wrapper {
+  position: relative;
+  max-width: 720px;
+  margin: 0 auto;
+  aspect-ratio: 2 / 3;
+  background:
+    linear-gradient(180deg, #0b6b2b 0%, #0f7d34 50%, #0b6b2b 100%);
+  border-radius: var(--radius);
+  border: 3px solid #fff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+.pitch-wrapper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.05) 0 40px, rgba(0, 0, 0, 0.04) 40px 80px);
+}
+.pitch-lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.pitch-lines::before,
+.pitch-lines::after {
+  content: "";
+  position: absolute;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+}
+.pitch-lines::before {
+  top: 50%;
+  left: 0;
+  right: 0;
+  border-width: 2px 0 0 0;
+}
+.pitch-lines::after {
+  top: calc(50% - 70px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+}
+.pitch-box {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 18%;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+}
+.pitch-box-top { top: 0; border-top: none; }
+.pitch-box-bot { bottom: 0; border-bottom: none; }
+.pitch-box-small {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30%;
+  height: 8%;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+}
+.pitch-box-small.top { top: 0; border-top: none; }
+.pitch-box-small.bot { bottom: 0; border-bottom: none; }
+
+.pitch-player {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+  z-index: 2;
+}
+.pitch-player:hover {
+  transform: translate(-50%, -55%) scale(1.1);
+}
+.pitch-player-circle {
+  width: 46px;
+  height: 46px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #DA291C, #a81b11);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 900;
+  font-size: 1rem;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 0 0 rgba(218, 41, 28, 0.5);
+  animation: pulseGlow 3s infinite;
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 0 0 rgba(218, 41, 28, 0.5); }
+  50% { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 0 8px rgba(218, 41, 28, 0); }
+}
+.pitch-player-name {
+  display: inline-block;
+  margin-top: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 4px;
+  white-space: nowrap;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pitch-formation-label {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  padding: 0.4rem 0.8rem;
+  background: rgba(0, 0, 0, 0.6);
+  color: #d4af37;
+  font-size: 0.8rem;
+  font-weight: 800;
+  border-radius: 6px;
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  letter-spacing: 1px;
+  z-index: 3;
+}
+.pitch-coach-label {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  padding: 0.4rem 0.8rem;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  z-index: 3;
+}
+
+/* ====== 3D TILT / GLOW on player card ====== */
+.player-card {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.player-card .player-photo {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(218, 41, 28, 0.4), transparent 60%),
+    linear-gradient(180deg, var(--psg-blue), var(--psg-blue-dark));
+}
+.player-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 2px transparent;
+  pointer-events: none;
+  transition: var(--transition);
+}
+.player-card:hover::after {
+  box-shadow: 0 0 0 2px var(--psg-red), 0 0 30px rgba(218, 41, 28, 0.4);
+}
+
+/* ====== TROPHY SHOWCASE v2 ====== */
+.trophy-showcase {
+  background: linear-gradient(135deg, #0a0f1a 0%, #001a33 50%, #002547 100%);
+  padding: 5rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+}
+.trophy-showcase::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(212, 175, 55, 0.2), transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(218, 41, 28, 0.18), transparent 40%);
+}
+.trophy-showcase-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  position: relative;
+}
+.trophy-showcase .section-title {
+  color: #fff;
+}
+.trophy-showcase .section-title::before {
+  background: #d4af37;
+}
+.trophy-showcase .section-intro {
+  color: rgba(255, 255, 255, 0.7);
+}
+.trophy-showcase .trophy-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  backdrop-filter: blur(10px);
+}
+.trophy-showcase .trophy-card::after {
+  background: linear-gradient(180deg, transparent 40%, rgba(212, 175, 55, 0.15));
+}
+.trophy-showcase .trophy-count {
+  color: #d4af37;
+  text-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+}
+.trophy-showcase .trophy-name {
+  color: rgba(255, 255, 255, 0.85);
+}
+.trophy-showcase .trophy-icon {
+  animation: trophyFloat 4s ease-in-out infinite;
+  font-size: 3rem;
+}
+.trophy-showcase .trophy-card:nth-child(even) .trophy-icon { animation-delay: 1s; }
+.trophy-showcase .trophy-card:nth-child(3n) .trophy-icon { animation-delay: 2s; }
+@keyframes trophyFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* ====== BIG NUMBERS (animated counters) ====== */
+.big-numbers {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  padding: 3rem 1.5rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.big-number {
+  text-align: center;
+}
+.big-number-value {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 900;
+  background: linear-gradient(135deg, #DA291C, #d4af37);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.big-number-label {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+/* ====== CTA BANNER ====== */
+.cta-banner {
+  background: linear-gradient(135deg, #002547, #004170);
+  padding: 5rem 1.5rem;
+  text-align: center;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  margin-top: 4rem;
+}
+.cta-banner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 120%, rgba(218, 41, 28, 0.5), transparent 60%);
+}
+.cta-banner-inner {
+  max-width: 780px;
+  margin: 0 auto;
+  position: relative;
+}
+.cta-banner h2 {
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 900;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: -0.5px;
+}
+.cta-banner p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  margin-bottom: 2rem;
+}
+
+/* ====== Responsive tweaks for new sections ====== */
+@media (max-width: 768px) {
+  .big-numbers { grid-template-columns: repeat(2, 1fr); }
+  .pitch-player-circle { width: 36px; height: 36px; font-size: 0.85rem; }
+  .pitch-player-name { font-size: 0.6rem; max-width: 80px; }
+  .hero-countdown { gap: 0.35rem; }
+  .countdown-unit { min-width: 56px; padding: 0.7rem 0.3rem; }
+  .countdown-value { font-size: 1.5rem; }
+  .live-ticker { font-size: 0.75rem; padding: 0.5rem 1rem; }
+}
+
+/* =========================================================
+   Base styles (below) — couleurs officielles
+   ========================================================= */
+
 :root {
   --psg-blue: #004170;
   --psg-blue-dark: #002547;

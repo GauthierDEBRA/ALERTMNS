@@ -153,6 +153,25 @@ const PSG_DATA = {
     { year: "2025", title: "Première Ligue des Champions !", desc: "Le Paris Saint-Germain remporte enfin sa première Ligue des Champions, consécration historique." }
   ],
 
+  // Formation 4-3-3 — positions en % du terrain (x de gauche à droite, y du but adverse au but PSG)
+  formation: {
+    label: "4 - 3 - 3",
+    coach: "Luis Enrique",
+    xi: [
+      { id: 1,  x: 50, y: 92, short: "Donnarumma" },
+      { id: 5,  x: 18, y: 72, short: "Hakimi" },
+      { id: 8,  x: 38, y: 76, short: "Pacho" },
+      { id: 4,  x: 62, y: 76, short: "Marquinhos" },
+      { id: 6,  x: 82, y: 72, short: "N. Mendes" },
+      { id: 13, x: 30, y: 52, short: "J. Neves" },
+      { id: 10, x: 50, y: 56, short: "Vitinha" },
+      { id: 11, x: 70, y: 52, short: "F. Ruiz" },
+      { id: 16, x: 22, y: 22, short: "Dembélé" },
+      { id: 18, x: 50, y: 14, short: "G. Ramos" },
+      { id: 17, x: 78, y: 22, short: "Barcola" }
+    ]
+  },
+
   news: [
     {
       tag: "Match", icon: "⚽", date: "7 AVRIL 2026",
