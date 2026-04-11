@@ -1383,3 +1383,191 @@ window.playGoalReplay = playGoalReplay;
     });
   }
 })();
+
+/* =========================================================
+   🎬 CINEMATIC INTRO + IMMERSIVE HERO
+   ========================================================= */
+(function () {
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const isHome = /(index\.html)?$/.test(location.pathname) && !location.pathname.match(/(players|stats|matches|history)\.html/);
+
+  // ===== CINEMATIC INTRO =====
+  function buildCinema() {
+    if (reduced) return;
+    const cinema = document.createElement("div");
+    cinema.className = "cinema";
+    cinema.id = "cinema";
+    cinema.innerHTML = `
+      <button class="cinema-skip">Passer l'intro ✕</button>
+      <div class="cinema-beam"></div>
+      <div class="cinema-lights"></div>
+      <div class="cinema-burst"></div>
+      <div class="cinema-stage">
+        <svg class="cinema-crest" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="cinBg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#0b5a94"/>
+              <stop offset="1" stop-color="#002547"/>
+            </linearGradient>
+            <linearGradient id="cinGold" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#f5e59a"/>
+              <stop offset="0.5" stop-color="#d4af37"/>
+              <stop offset="1" stop-color="#8a6d15"/>
+            </linearGradient>
+          </defs>
+          <circle cx="50" cy="50" r="47" fill="url(#cinBg)" stroke="url(#cinGold)" stroke-width="3"/>
+          <circle cx="50" cy="50" r="40" fill="none" stroke="#E30613" stroke-width="2"/>
+          <text x="50" y="44" text-anchor="middle" fill="#fff" font-family="Arial Black, sans-serif" font-weight="900" font-size="14">PARIS</text>
+          <text x="50" y="60" text-anchor="middle" fill="#d4af37" font-family="Arial Black, sans-serif" font-weight="900" font-size="16" letter-spacing="2">SG</text>
+          <text x="50" y="73" text-anchor="middle" fill="#fff" font-family="Arial, sans-serif" font-weight="700" font-size="6" opacity="0.85">EST. 1970</text>
+        </svg>
+        <div class="cinema-lines">
+          <span class="cinema-line l1">PARIS SAINT-GERMAIN</span>
+          <span class="cinema-line l2">FOOTBALL CLUB</span>
+          <span class="cinema-line l3">EST. 1970</span>
+        </div>
+      </div>
+      <div class="cinema-slam"><span class="accent">Ici c'est</span><span class="accent">Paris</span></div>
+      <div class="cinema-reveal-top"></div>
+      <div class="cinema-reveal-bottom"></div>
+    `;
+    document.documentElement.appendChild(cinema);
+
+    // Inject stadium lights
+    const lights = cinema.querySelector(".cinema-lights");
+    const LIGHT_COUNT = 9;
+    for (let i = 0; i < LIGHT_COUNT; i++) {
+      const l = document.createElement("div");
+      l.className = "cinema-light";
+      l.style.animationDelay = (0.3 + i * 0.07) + "s";
+      lights.appendChild(l);
+    }
+
+    const close = () => {
+      cinema.classList.add("closing");
+      setTimeout(() => {
+        cinema.classList.add("done");
+        document.body.classList.add("intro-ended");
+        // Welcome confetti burst
+        if (window.__fireConf && isHome) {
+          window.__fireConf(innerWidth / 2, innerHeight / 3);
+          setTimeout(() => window.__fireConf(innerWidth * 0.25, innerHeight / 2), 150);
+          setTimeout(() => window.__fireConf(innerWidth * 0.75, innerHeight / 2), 300);
+        }
+        setTimeout(() => cinema.remove(), 1200);
+      }, 900);
+    };
+
+    cinema.querySelector(".cinema-skip").addEventListener("click", close);
+    cinema.addEventListener("click", e => {
+      if (e.target.closest(".cinema-skip")) return;
+    });
+
+    // Auto-close after full sequence
+    setTimeout(close, 5400);
+
+    // ESC skips
+    const escHandler = e => {
+      if (e.key === "Escape") {
+        close();
+        document.removeEventListener("keydown", escHandler);
+      }
+    };
+    document.addEventListener("keydown", escHandler);
+  }
+
+  // Only run cinema on first load per session (but allow replay via key)
+  if (!reduced) {
+    // Start immediately
+    buildCinema();
+  }
+
+  // Allow replay of intro with Shift+I
+  document.addEventListener("keydown", e => {
+    if (e.shiftKey && e.key.toLowerCase() === "i" && !document.querySelector(".cinema:not(.done)")) {
+      buildCinema();
+    }
+  });
+
+  // ===== HERO PARALLAX on mouse move =====
+  const hero = document.querySelector(".hero");
+  if (hero && !reduced && window.matchMedia("(hover:hover)").matches) {
+    let mx = 0, my = 0, tmx = 0, tmy = 0;
+    hero.addEventListener("mousemove", e => {
+      const r = hero.getBoundingClientRect();
+      tmx = ((e.clientX - r.left) / r.width - 0.5) * 2;
+      tmy = ((e.clientY - r.top) / r.height - 0.5) * 2;
+    });
+    hero.addEventListener("mouseleave", () => { tmx = 0; tmy = 0; });
+
+    const eiffel = hero.querySelector(".hero-bg-svg");
+    const stadium = hero.querySelector(".hero-stadium");
+    const conic = hero.querySelector(".hero-conic");
+    const spot = hero.querySelector(".hero-spot");
+    const orbit = hero.querySelector(".orbit-badges");
+    const title = hero.querySelector(".hero-title");
+    const container = hero.querySelector(".container");
+
+    const loop = () => {
+      mx += (tmx - mx) * 0.08;
+      my += (tmy - my) * 0.08;
+      if (eiffel) eiffel.style.transform = `translateX(-50%) translate(${mx * 18}px, ${my * 10}px)`;
+      if (stadium) stadium.style.transform = `translate(${mx * 12}px, ${my * 6}px)`;
+      if (conic) conic.style.transform = `translate(calc(-50% + ${mx * 30}px), calc(-50% + ${my * 20}px)) rotate(var(--rot, 0deg))`;
+      if (spot) spot.style.transform = `translateX(calc(-50% + ${mx * 20}px)) rotate(${mx * 5}deg)`;
+      if (orbit) orbit.style.transform = `translate(${-mx * 25}px, ${-my * 18}px)`;
+      if (title) title.style.transform = `translate(${mx * 8}px, ${my * 5}px)`;
+      if (container) container.style.transform = `translate(${mx * 4}px, ${my * 3}px)`;
+      requestAnimationFrame(loop);
+    };
+    loop();
+  }
+
+  // ===== SCROLL INDICATOR =====
+  if (hero && !hero.querySelector(".scroll-indicator")) {
+    const ind = document.createElement("div");
+    ind.className = "scroll-indicator";
+    ind.textContent = "Scrolle";
+    hero.appendChild(ind);
+    window.addEventListener("scroll", () => {
+      if (window.scrollY > 100) ind.style.opacity = "0";
+      else ind.style.opacity = "";
+    });
+  }
+
+  // ===== GOAL CELEBRATION TRIGGER =====
+  window.__goalCelebration = function () {
+    const fx = document.createElement("div");
+    fx.className = "goal-fx";
+    fx.innerHTML = `<div class="goal-fx-text">GOAL!</div>`;
+    document.body.appendChild(fx);
+    document.body.classList.add("shake");
+    if (window.__fireConf) {
+      for (let i = 0; i < 8; i++) {
+        setTimeout(() => window.__fireConf(Math.random() * innerWidth, innerHeight * 0.3 + Math.random() * 100), i * 120);
+      }
+    }
+    setTimeout(() => {
+      document.body.classList.remove("shake");
+      fx.remove();
+    }, 2100);
+  };
+
+  // Click on nav logo = goal celebration
+  document.addEventListener("click", e => {
+    const logo = e.target.closest(".logo, .logo-text, .brand");
+    if (logo) {
+      e.preventDefault();
+      window.__goalCelebration();
+      if (typeof window.__unlock === "function") window.__unlock();
+    }
+  });
+
+  // ===== ENHANCED HERO TITLE WRAPPING =====
+  // Ensure hero-title is wrapped in container with proper z-index after cinema
+  document.addEventListener("click", e => {
+    if (e.target.closest(".hero-title")) {
+      window.__goalCelebration();
+    }
+  });
+})();
