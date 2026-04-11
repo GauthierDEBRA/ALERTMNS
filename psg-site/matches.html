@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matchs · PSG Fan Zone</title>
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+<header class="site-header">
+  <nav class="nav">
+    <a href="index.html" class="nav-brand"><div class="nav-logo">PSG</div><span>Paris Fan Zone</span></a>
+    <ul class="nav-links">
+      <li><a href="index.html">Accueil</a></li>
+      <li><a href="players.html">Effectif</a></li>
+      <li><a href="matches.html" class="active">Matchs</a></li>
+      <li><a href="stats.html">Statistiques</a></li>
+      <li><a href="history.html">Histoire</a></li>
+    </ul>
+    <button class="nav-toggle" aria-label="Menu">☰</button>
+  </nav>
+</header>
+
+<section class="hero" style="min-height:320px">
+  <div class="hero-inner" style="padding:3rem 1.5rem;grid-template-columns:1fr">
+    <div>
+      <span class="hero-eyebrow">Calendrier & Résultats</span>
+      <h1 class="hero-title">Les <span>matchs</span> du PSG</h1>
+      <p class="hero-sub">Tous les résultats récents avec le détail des buts marqués, commentaires et actions clés. Retrouve également les prochaines rencontres.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="tabs">
+    <button class="tab active" data-match="ALL">Tous</button>
+    <button class="tab" data-match="PLAYED">Joués</button>
+    <button class="tab" data-match="UPCOMING">À venir</button>
+  </div>
+  <div class="grid" id="matches-list" style="gap:1rem"></div>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand"><div class="nav-logo">PSG</div><div><h3>Paris Fan Zone</h3><p>Site fan non officiel dédié au PSG.</p></div></div>
+    <div class="footer-col"><h4>Navigation</h4><ul><li><a href="index.html">Accueil</a></li><li><a href="players.html">Effectif</a></li><li><a href="matches.html">Matchs</a></li><li><a href="stats.html">Stats</a></li><li><a href="history.html">Histoire</a></li></ul></div>
+    <div class="footer-col"><h4>Club</h4><ul><li><a href="#">Parc des Princes</a></li></ul></div>
+    <div class="footer-col"><h4>Suivre</h4><ul><li><a href="#">Twitter</a></li></ul></div>
+  </div>
+  <div class="footer-bottom">© 2026 PSG Fan Zone — Site non officiel.</div>
+</footer>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/main.js"></script>
+</body>
+</html>

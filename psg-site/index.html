@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Site fan officieux du Paris Saint-Germain : stats, joueurs, matchs, buts, histoire du club.">
+<title>PSG Fan Zone · Paris Saint-Germain</title>
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+<header class="site-header">
+  <nav class="nav">
+    <a href="index.html" class="nav-brand">
+      <div class="nav-logo">PSG</div>
+      <span>Paris Fan Zone</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html" class="active">Accueil</a></li>
+      <li><a href="players.html">Effectif</a></li>
+      <li><a href="matches.html">Matchs</a></li>
+      <li><a href="stats.html">Statistiques</a></li>
+      <li><a href="history.html">Histoire</a></li>
+    </ul>
+    <button class="nav-toggle" aria-label="Menu">☰</button>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="hero-inner">
+    <div>
+      <span class="hero-eyebrow">Saison 2025 / 2026</span>
+      <h1 class="hero-title">Ici c'est <span>Paris</span></h1>
+      <p class="hero-sub">Bienvenue sur la fan zone officieuse du Paris Saint-Germain. Retrouvez l'effectif, les stats complètes, les matchs joués avec les actions de but commentées, et l'histoire glorieuse du club de la capitale.</p>
+      <div class="hero-cta">
+        <a href="players.html" class="btn btn-primary">Voir l'effectif</a>
+        <a href="matches.html" class="btn btn-outline">Derniers matchs</a>
+      </div>
+    </div>
+    <div class="hero-stats" id="hero-stats"></div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-header">
+    <div>
+      <h2 class="section-title">Dernières actualités</h2>
+      <p class="section-intro">Tout ce qu'il faut savoir sur le quotidien des Rouge et Bleu.</p>
+    </div>
+  </div>
+  <div class="grid grid-3" id="news-grid"></div>
+</section>
+
+<section class="section section-alt" style="max-width:none;background:var(--psg-white)">
+  <div style="max-width:1280px;margin:0 auto;padding:0 1.5rem">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Prochains matchs</h2>
+        <p class="section-intro">Ne manquez pas les prochaines rencontres du PSG.</p>
+      </div>
+      <a href="matches.html" class="btn btn-primary">Tout voir</a>
+    </div>
+    <div class="grid" id="next-matches" style="gap:1rem"></div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <div class="nav-logo">PSG</div>
+      <div>
+        <h3>Paris Fan Zone</h3>
+        <p>Site fan non officiel dédié au Paris Saint-Germain. Pour les passionnés, par les passionnés des Rouge et Bleu.</p>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Navigation</h4>
+      <ul>
+        <li><a href="index.html">Accueil</a></li>
+        <li><a href="players.html">Effectif</a></li>
+        <li><a href="matches.html">Matchs</a></li>
+        <li><a href="stats.html">Statistiques</a></li>
+        <li><a href="history.html">Histoire</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Club</h4>
+      <ul>
+        <li><a href="#">Parc des Princes</a></li>
+        <li><a href="#">Boutique</a></li>
+        <li><a href="#">Abonnements</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Suivre</h4>
+      <ul>
+        <li><a href="#">Twitter / X</a></li>
+        <li><a href="#">Instagram</a></li>
+        <li><a href="#">YouTube</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">© 2026 PSG Fan Zone — Site non officiel, fait avec passion pour les supporters du Paris Saint-Germain.</div>
+</footer>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/main.js"></script>
+</body>
+</html>
