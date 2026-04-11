@@ -831,3 +831,440 @@ function playGoalReplay(matchId, goalIdx) {
   if (again) again.addEventListener("click", animateBall);
 }
 window.playGoalReplay = playGoalReplay;
+
+/* =========================================================
+   🚀 ADVANCED ENHANCEMENTS
+   ========================================================= */
+(function () {
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ===== CANVAS PARTICLE SYSTEM (hero) =====
+  function initHeroParticles() {
+    const hero = document.querySelector(".hero");
+    if (!hero || reduced) return;
+    const canvas = document.createElement("canvas");
+    canvas.className = "hero-particles";
+    hero.insertBefore(canvas, hero.firstChild);
+    const ctx = canvas.getContext("2d");
+    let w, h, particles = [];
+    const resize = () => {
+      w = canvas.width = hero.offsetWidth;
+      h = canvas.height = hero.offsetHeight;
+    };
+    resize();
+    window.addEventListener("resize", resize);
+    const COUNT = Math.min(90, Math.floor((w * h) / 16000));
+    for (let i = 0; i < COUNT; i++) {
+      particles.push({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.25,
+        vy: -Math.random() * 0.5 - 0.1,
+        r: Math.random() * 2 + 0.5,
+        life: Math.random(),
+        hue: Math.random() > 0.7 ? "#E30613" : "#D4AF37"
+      });
+    }
+    const draw = () => {
+      ctx.clearRect(0, 0, w, h);
+      particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life += 0.005;
+        if (p.y < -10) { p.y = h + 10; p.x = Math.random() * w; }
+        if (p.x < -10) p.x = w + 10;
+        if (p.x > w + 10) p.x = -10;
+        const glow = 0.4 + Math.sin(p.life * 4) * 0.3;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = p.hue;
+        ctx.globalAlpha = glow;
+        ctx.shadowColor = p.hue;
+        ctx.shadowBlur = 8;
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+      requestAnimationFrame(draw);
+    };
+    draw();
+  }
+  initHeroParticles();
+
+  // ===== SPLIT TEXT REVEAL on hero title =====
+  function initSplitText() {
+    if (reduced) return;
+    const title = document.querySelector(".hero-title");
+    if (!title || title.dataset.split) return;
+    title.dataset.split = "1";
+    const html = title.innerHTML;
+    const walker = document.createElement("div");
+    walker.innerHTML = html;
+    const result = [];
+    let charIdx = 0;
+    walker.childNodes.forEach(node => {
+      if (node.nodeType === 3) {
+        const words = node.textContent.split(" ");
+        words.forEach((w, wi) => {
+          if (!w) return;
+          let word = '<span class="split-word">';
+          for (const ch of w) {
+            word += `<span class="split-char" style="animation-delay:${charIdx * 30}ms">${ch}</span>`;
+            charIdx++;
+          }
+          word += "</span>";
+          result.push(word);
+          if (wi < words.length - 1) result.push(" ");
+        });
+      } else if (node.nodeType === 1) {
+        const words = (node.textContent || "").split(" ");
+        let inner = "";
+        words.forEach((w, wi) => {
+          if (!w) return;
+          let word = '<span class="split-word">';
+          for (const ch of w) {
+            word += `<span class="split-char" style="animation-delay:${charIdx * 30}ms">${ch}</span>`;
+            charIdx++;
+          }
+          word += "</span>";
+          inner += word;
+          if (wi < words.length - 1) inner += " ";
+        });
+        const clone = node.cloneNode(false);
+        clone.innerHTML = inner;
+        result.push(clone.outerHTML);
+      }
+    });
+    title.innerHTML = result.join("");
+  }
+  setTimeout(initSplitText, 1500);
+
+  // ===== MAGNETIC BUTTONS =====
+  if (!reduced && window.matchMedia("(hover:hover)").matches) {
+    document.querySelectorAll(".btn").forEach(btn => {
+      btn.addEventListener("mousemove", e => {
+        const r = btn.getBoundingClientRect();
+        const x = e.clientX - r.left - r.width / 2;
+        const y = e.clientY - r.top - r.height / 2;
+        btn.style.transform = `translate(${x * 0.25}px, ${y * 0.35}px)`;
+      });
+      btn.addEventListener("mouseleave", () => {
+        btn.style.transform = "";
+      });
+    });
+  }
+
+  // ===== CUSTOM CURSOR =====
+  if (window.matchMedia("(hover:hover)").matches && !reduced) {
+    const cursor = document.createElement("div");
+    cursor.className = "cursor-follower";
+    document.body.appendChild(cursor);
+    let x = 0, y = 0, tx = 0, ty = 0;
+    document.addEventListener("mousemove", e => {
+      tx = e.clientX; ty = e.clientY;
+      cursor.classList.add("visible");
+    });
+    const loop = () => {
+      x += (tx - x) * 0.2;
+      y += (ty - y) * 0.2;
+      cursor.style.left = x + "px";
+      cursor.style.top = y + "px";
+      requestAnimationFrame(loop);
+    };
+    loop();
+    const growSel = "a, button, .btn, .player-card, .match-card, .trophy-card, .cmdk-item, [role=button]";
+    document.addEventListener("mouseover", e => {
+      if (e.target.closest(growSel)) cursor.classList.add("grow");
+      else cursor.classList.remove("grow");
+    });
+    document.addEventListener("mousedown", () => cursor.classList.add("active"));
+    document.addEventListener("mouseup", () => cursor.classList.remove("active"));
+    document.addEventListener("mouseleave", () => cursor.classList.remove("visible"));
+  }
+
+  // ===== EASING COUNTER (replace linear) =====
+  function animateCount(el, target, duration = 1600) {
+    const start = performance.now();
+    const from = 0;
+    const easeOutQuart = t => 1 - Math.pow(1 - t, 4);
+    const step = now => {
+      const p = Math.min(1, (now - start) / duration);
+      const v = Math.round(from + (target - from) * easeOutQuart(p));
+      el.textContent = v.toLocaleString("fr-FR");
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  const countObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const el = e.target;
+        const target = parseInt(el.dataset.count || el.textContent.replace(/\D/g, ""), 10);
+        if (!el.dataset.counted && !isNaN(target)) {
+          el.dataset.counted = "1";
+          el.dataset.count = target;
+          animateCount(el, target);
+        }
+        countObs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.4 });
+  document.querySelectorAll(".big-number, .trophy-count, [data-counter]").forEach(el => {
+    const n = parseInt(el.textContent.replace(/\D/g, ""), 10);
+    if (!isNaN(n)) {
+      el.dataset.count = n;
+      el.textContent = "0";
+      countObs.observe(el);
+    }
+  });
+
+  // ===== INFINITE MARQUEE =====
+  function injectMarquee() {
+    if (document.querySelector(".marquee")) return;
+    const hero = document.querySelector(".hero");
+    if (!hero) return;
+    const items = [
+      "13× Ligue 1",
+      "Finaliste LDC 2020",
+      "Champion d'Europe 2025",
+      "15× Coupe de France",
+      "Ici c'est Paris",
+      "Rêver plus grand",
+      "9× Coupe de la Ligue",
+      "Rouge et Bleu",
+      "Trophée des Champions ×12",
+      "Parc des Princes"
+    ];
+    const content = items.map(t => `<span>${t}</span>`).join("");
+    const m = document.createElement("div");
+    m.className = "marquee";
+    m.innerHTML = `<div class="marquee-track">${content}${content}</div>`;
+    hero.insertAdjacentElement("afterend", m);
+  }
+  injectMarquee();
+
+  // ===== COMMAND PALETTE (Cmd+K / Ctrl+K) =====
+  const paletteItems = [
+    { icon: "🏠", label: "Accueil", desc: "Page principale · Hero, stats, formation", href: "index.html" },
+    { icon: "👕", label: "Effectif", desc: "Tous les joueurs du PSG 2025-26", href: "players.html" },
+    { icon: "📊", label: "Statistiques", desc: "Tableaux, buteurs, progression", href: "stats.html" },
+    { icon: "⚽", label: "Matchs", desc: "Résultats et actions de but", href: "matches.html" },
+    { icon: "🏆", label: "Histoire", desc: "Trophées, légendes, timeline", href: "history.html" },
+    { icon: "🌙", label: "Changer de thème", desc: "Basculer clair / sombre", action: "theme" },
+    { icon: "🎉", label: "Déclencher des confettis", desc: "Pour le fun", action: "confetti" },
+    { icon: "⌨️", label: "Raccourcis clavier", desc: "Voir toutes les touches", action: "help" }
+  ];
+  function buildPalette() {
+    if (document.querySelector(".cmdk-backdrop")) return;
+    const bd = document.createElement("div");
+    bd.className = "cmdk-backdrop";
+    bd.innerHTML = `
+      <div class="cmdk" role="dialog" aria-label="Palette de commandes">
+        <div class="cmdk-input-wrap">
+          <span class="cmdk-icon">⚡</span>
+          <input class="cmdk-input" placeholder="Chercher une page, une action..." autocomplete="off">
+          <span class="cmdk-kbd">ESC</span>
+        </div>
+        <div class="cmdk-list"></div>
+        <div class="cmdk-footer">
+          <div>↑↓ Naviguer · ⏎ Valider · ESC Fermer</div>
+          <div><span class="cmdk-kbd">⌘</span> <span class="cmdk-kbd">K</span></div>
+        </div>
+      </div>`;
+    document.body.appendChild(bd);
+    const input = bd.querySelector(".cmdk-input");
+    const list = bd.querySelector(".cmdk-list");
+    let selected = 0;
+    const render = (q = "") => {
+      const filtered = paletteItems.filter(it =>
+        it.label.toLowerCase().includes(q.toLowerCase()) ||
+        (it.desc && it.desc.toLowerCase().includes(q.toLowerCase()))
+      );
+      list.innerHTML = filtered.length
+        ? filtered.map((it, i) => `
+          <div class="cmdk-item ${i === selected ? "selected" : ""}" data-i="${i}" data-href="${it.href || ""}" data-action="${it.action || ""}">
+            <div class="cmdk-item-icon">${it.icon}</div>
+            <div>
+              <div class="cmdk-item-label">${it.label}</div>
+              <div class="cmdk-item-desc">${it.desc}</div>
+            </div>
+          </div>`).join("")
+        : `<div style="padding:2rem;text-align:center;color:#9ca3af">Aucun résultat</div>`;
+      list._filtered = filtered;
+    };
+    render();
+    input.addEventListener("input", e => { selected = 0; render(e.target.value); });
+    input.addEventListener("keydown", e => {
+      const items = list._filtered || [];
+      if (e.key === "ArrowDown") { selected = (selected + 1) % items.length; render(input.value); e.preventDefault(); }
+      else if (e.key === "ArrowUp") { selected = (selected - 1 + items.length) % items.length; render(input.value); e.preventDefault(); }
+      else if (e.key === "Enter" && items[selected]) {
+        const it = items[selected];
+        closePalette();
+        if (it.href) window.location.href = it.href;
+        else if (it.action === "theme") document.querySelector(".theme-toggle")?.click();
+        else if (it.action === "confetti" && window.__fireConf) window.__fireConf(innerWidth / 2, innerHeight / 2);
+        else if (it.action === "help") showShortcuts();
+      }
+    });
+    list.addEventListener("click", e => {
+      const item = e.target.closest(".cmdk-item");
+      if (!item) return;
+      const it = list._filtered[+item.dataset.i];
+      closePalette();
+      if (it.href) window.location.href = it.href;
+      else if (it.action === "theme") document.querySelector(".theme-toggle")?.click();
+      else if (it.action === "confetti" && window.__fireConf) window.__fireConf(innerWidth / 2, innerHeight / 2);
+      else if (it.action === "help") showShortcuts();
+    });
+    bd.addEventListener("click", e => { if (e.target === bd) closePalette(); });
+    window.__palette = bd;
+  }
+  function openPalette() {
+    buildPalette();
+    const bd = window.__palette;
+    bd.classList.add("active");
+    setTimeout(() => bd.querySelector(".cmdk-input")?.focus(), 50);
+  }
+  function closePalette() {
+    window.__palette?.classList.remove("active");
+  }
+  window.__openPalette = openPalette;
+
+  // ===== KEYBOARD SHORTCUTS =====
+  document.addEventListener("keydown", e => {
+    if (e.target.matches("input, textarea, [contenteditable]")) {
+      if (e.key === "Escape") closePalette();
+      return;
+    }
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      openPalette();
+      return;
+    }
+    if (e.key === "Escape") closePalette();
+    if (e.key === "?") { e.preventDefault(); showShortcuts(); }
+    const navMap = {
+      "1": "index.html",
+      "2": "players.html",
+      "3": "stats.html",
+      "4": "matches.html",
+      "5": "history.html"
+    };
+    if (navMap[e.key] && !e.metaKey && !e.ctrlKey) {
+      window.location.href = navMap[e.key];
+    }
+    if (e.key.toLowerCase() === "t") {
+      document.querySelector(".theme-toggle")?.click();
+    }
+  });
+
+  // ===== ACHIEVEMENTS =====
+  let toastStack = null;
+  function ensureToastStack() {
+    if (toastStack) return toastStack;
+    toastStack = document.createElement("div");
+    toastStack.className = "toast-stack";
+    document.body.appendChild(toastStack);
+    return toastStack;
+  }
+  function toast(title, text, icon = "🏆") {
+    const stack = ensureToastStack();
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.innerHTML = `
+      <div class="toast-icon">${icon}</div>
+      <div class="toast-body">
+        <div class="toast-title">${title}</div>
+        <div class="toast-text">${text}</div>
+      </div>`;
+    stack.appendChild(el);
+    setTimeout(() => el.remove(), 4800);
+  }
+  const achievements = new Set();
+  function unlock(key, title, text, icon) {
+    if (achievements.has(key)) return;
+    achievements.add(key);
+    toast(title, text, icon);
+    try { localStorage.setItem("psg-ach", JSON.stringify([...achievements])); } catch (e) {}
+  }
+  try {
+    const saved = JSON.parse(localStorage.getItem("psg-ach") || "[]");
+    saved.forEach(k => achievements.add(k));
+  } catch (e) {}
+
+  setTimeout(() => unlock("welcome", "Bienvenue au Parc", "Tu viens de rejoindre les rangs du Collectif.", "🏟️"), 2500);
+
+  let scrolledOnce = false;
+  window.addEventListener("scroll", () => {
+    if (!scrolledOnce && window.scrollY > 400) {
+      scrolledOnce = true;
+      unlock("scroll1", "Premier Dribble", "Tu as commencé à explorer le site.", "⚽");
+    }
+    const d = document.documentElement;
+    const pct = d.scrollTop / (d.scrollHeight - d.clientHeight);
+    if (pct > 0.9) unlock("bottom", "Marathon Parisien", "Tu as atteint le bas de la page. Respect.", "🏃");
+  });
+
+  document.querySelectorAll(".trophy-card").forEach(c => {
+    c.addEventListener("mouseenter", () => unlock("trophy", "Touche d'Or", "Tu as survolé un trophée du PSG.", "🏆"), { once: true });
+  });
+  document.addEventListener("click", e => {
+    if (e.target.closest(".replay-btn")) unlock("replay", "Action Décisive", "Tu as rejoué une action de but.", "🎬");
+    if (e.target.closest(".player-card")) unlock("player", "Profil Joueur", "Tu connais tes joueurs.", "👕");
+    if (e.target.closest(".cmdk-item")) unlock("cmdk", "Power User", "Tu utilises la palette de commandes.", "⚡");
+  });
+
+  // ===== KEYBOARD HINT BADGE =====
+  if (!document.querySelector(".kbd-hint")) {
+    const hint = document.createElement("button");
+    hint.className = "kbd-hint";
+    hint.innerHTML = `⚡ Appuie sur <kbd>⌘K</kbd> pour tout`;
+    hint.addEventListener("click", openPalette);
+    document.body.appendChild(hint);
+  }
+
+  // ===== SHORTCUTS HELP MODAL =====
+  function showShortcuts() {
+    toast("Raccourcis clavier", "1-5 pages · T thème · ⌘K palette · ? aide", "⌨️");
+  }
+
+  // ===== KONAMI CODE EASTER EGG =====
+  const konami = ["ArrowUp","ArrowUp","ArrowDown","ArrowDown","ArrowLeft","ArrowRight","ArrowLeft","ArrowRight","b","a"];
+  let konamiIdx = 0;
+  document.addEventListener("keydown", e => {
+    if (e.key === konami[konamiIdx] || e.key.toLowerCase() === konami[konamiIdx]) {
+      konamiIdx++;
+      if (konamiIdx === konami.length) {
+        konamiIdx = 0;
+        triggerEgg();
+      }
+    } else {
+      konamiIdx = 0;
+    }
+  });
+  function triggerEgg() {
+    unlock("konami", "Code Konami ★", "Tu connais les vrais secrets. Légende.", "👑");
+    const modal = document.createElement("div");
+    modal.className = "egg-modal";
+    modal.innerHTML = `
+      <div class="egg-content">
+        <div class="egg-title">Allez Paris !</div>
+        <p class="egg-text">
+          Tu viens d'entrer dans le cercle des vrais. Le Collectif Ultras Paris te salue.
+          <br><br>
+          <strong style="color:var(--gold)">Ici c'est Paris.</strong>
+        </p>
+        <button class="egg-close">Fermer</button>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.classList.add("active");
+    modal.querySelector(".egg-close").onclick = () => modal.remove();
+    modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+    if (window.__fireConf) {
+      for (let i = 0; i < 6; i++) {
+        setTimeout(() => window.__fireConf(Math.random() * innerWidth, 0), i * 200);
+      }
+    }
+  }
+})();
