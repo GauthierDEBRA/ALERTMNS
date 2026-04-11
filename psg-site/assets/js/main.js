@@ -1,4 +1,49 @@
 // PSG Fan Site - JS principal
+
+// Inject splash screen + scroll bar immediately
+(function () {
+  const splash = document.createElement("div");
+  splash.className = "splash";
+  splash.id = "splash";
+  splash.innerHTML = `
+    <svg class="splash-crest" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="splashBg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#0b5a94"/>
+          <stop offset="1" stop-color="#002547"/>
+        </linearGradient>
+        <linearGradient id="splashGold" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#f5e59a"/>
+          <stop offset="0.5" stop-color="#d4af37"/>
+          <stop offset="1" stop-color="#8a6d15"/>
+        </linearGradient>
+      </defs>
+      <circle cx="50" cy="50" r="47" fill="url(#splashBg)" stroke="url(#splashGold)" stroke-width="3"/>
+      <circle cx="50" cy="50" r="40" fill="none" stroke="#DA291C" stroke-width="2"/>
+      <text x="50" y="44" text-anchor="middle" fill="#fff" font-family="Arial Black, sans-serif" font-weight="900" font-size="14">PARIS</text>
+      <text x="50" y="60" text-anchor="middle" fill="#d4af37" font-family="Arial Black, sans-serif" font-weight="900" font-size="16" letter-spacing="2">SG</text>
+      <text x="50" y="73" text-anchor="middle" fill="#fff" font-family="Arial, sans-serif" font-weight="700" font-size="6" opacity="0.85">EST. 1970</text>
+    </svg>
+    <div class="splash-text">Ici c'est Paris</div>
+  `;
+  document.documentElement.appendChild(splash);
+
+  const bar = document.createElement("div");
+  bar.className = "scroll-bar";
+  bar.id = "scroll-bar";
+  document.documentElement.appendChild(bar);
+
+  window.addEventListener("load", () => {
+    setTimeout(() => splash.classList.add("hidden"), 1400);
+  });
+
+  window.addEventListener("scroll", () => {
+    const h = document.documentElement;
+    const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+    bar.style.width = pct + "%";
+  });
+})();
+
 document.addEventListener("DOMContentLoaded", () => {
   // Nav toggle mobile
   const toggle = document.querySelector(".nav-toggle");
@@ -169,6 +214,205 @@ document.addEventListener("DOMContentLoaded", () => {
     pitchEl.querySelectorAll(".pitch-player").forEach(p =>
       p.addEventListener("click", () => openPlayerModal(+p.dataset.id))
     );
+  }
+
+  // ===== CURSOR TRAIL (desktop only) =====
+  if (window.matchMedia("(hover: hover)").matches) {
+    let lastSpark = 0;
+    document.addEventListener("mousemove", e => {
+      const now = Date.now();
+      if (now - lastSpark < 40) return;
+      lastSpark = now;
+      const s = document.createElement("div");
+      s.className = "cursor-spark";
+      s.style.left = e.clientX + "px";
+      s.style.top = e.clientY + "px";
+      document.body.appendChild(s);
+      setTimeout(() => s.remove(), 800);
+    });
+  }
+
+  // ===== CONFETTI BURST =====
+  const fireConfetti = (x, y) => {
+    const colors = ["#DA291C", "#002547", "#d4af37", "#ffffff", "#0b5a94"];
+    for (let i = 0; i < 50; i++) {
+      const c = document.createElement("div");
+      c.className = "confetti";
+      c.style.left = x + "px";
+      c.style.top = y + "px";
+      c.style.background = colors[i % colors.length];
+      c.style.animationDelay = (Math.random() * 0.3) + "s";
+      c.style.animationDuration = (2 + Math.random() * 1.5) + "s";
+      const dx = (Math.random() - 0.5) * 600;
+      c.style.setProperty("transform", `translateX(${dx}px)`);
+      c.animate(
+        [
+          { transform: `translate(0, 0) rotate(0deg)`, opacity: 1 },
+          { transform: `translate(${dx}px, ${400 + Math.random() * 300}px) rotate(${Math.random() * 720}deg)`, opacity: 0 }
+        ],
+        { duration: 2000 + Math.random() * 1000, easing: "cubic-bezier(.4,.2,.2,1)" }
+      );
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3500);
+    }
+  };
+  window.__fireConf = fireConfetti;
+  document.querySelectorAll(".trophy-card").forEach(card => {
+    card.addEventListener("mouseenter", () => {
+      const r = card.getBoundingClientRect();
+      fireConfetti(r.left + r.width / 2, r.top + r.height / 2);
+    });
+    card.addEventListener("click", () => {
+      const r = card.getBoundingClientRect();
+      fireConfetti(r.left + r.width / 2, r.top + r.height / 2);
+    });
+  });
+
+  // ===== PARALLAX on hero Eiffel =====
+  const heroBg = document.querySelector(".hero-bg-svg");
+  if (heroBg) {
+    window.addEventListener("scroll", () => {
+      const scroll = window.scrollY;
+      if (scroll < 800) {
+        heroBg.style.transform = `translateX(-50%) translateY(${scroll * 0.35}px)`;
+      }
+    });
+  }
+
+  // ===== THEME TOGGLE =====
+  const navBar = document.querySelector(".nav");
+  if (navBar && !document.querySelector(".theme-toggle")) {
+    const btn = document.createElement("button");
+    btn.className = "theme-toggle";
+    btn.innerHTML = "🌙";
+    btn.setAttribute("aria-label", "Changer le thème");
+    btn.addEventListener("click", () => {
+      document.body.classList.toggle("dark-theme");
+      btn.innerHTML = document.body.classList.contains("dark-theme") ? "☀️" : "🌙";
+      try { localStorage.setItem("psg-theme", document.body.classList.contains("dark-theme") ? "dark" : "light"); } catch(e){}
+    });
+    navBar.appendChild(btn);
+    try {
+      if (localStorage.getItem("psg-theme") === "dark") {
+        document.body.classList.add("dark-theme");
+        btn.innerHTML = "☀️";
+      }
+    } catch(e){}
+  }
+
+  // ===== QUOTE CAROUSEL =====
+  const quoteWrap = document.getElementById("quote-carousel");
+  if (quoteWrap && PSG_DATA.quotes) {
+    let idx = 0;
+    const slides = PSG_DATA.quotes.map((q, i) =>
+      `<div class="quote-slide${i === 0 ? " active" : ""}" data-i="${i}">
+        <div class="quote-text">" ${q.text} "</div>
+        <div class="quote-author">— ${q.author}</div>
+      </div>`).join("");
+    const dots = PSG_DATA.quotes.map((_, i) =>
+      `<button class="quote-dot${i === 0 ? " active" : ""}" data-i="${i}" aria-label="Citation ${i+1}"></button>`).join("");
+    quoteWrap.innerHTML = `
+      <div class="quote-inner">
+        <div class="quote-icon">❝</div>
+        ${slides}
+        <div class="quote-dots">${dots}</div>
+      </div>`;
+    const go = n => {
+      quoteWrap.querySelectorAll(".quote-slide").forEach((s, i) => s.classList.toggle("active", i === n));
+      quoteWrap.querySelectorAll(".quote-dot").forEach((d, i) => d.classList.toggle("active", i === n));
+      idx = n;
+    };
+    quoteWrap.querySelectorAll(".quote-dot").forEach(d =>
+      d.addEventListener("click", () => go(+d.dataset.i))
+    );
+    setInterval(() => go((idx + 1) % PSG_DATA.quotes.length), 5000);
+  }
+
+  // ===== MATCH PREDICTION GAME =====
+  const predictWrap = document.getElementById("predict");
+  if (predictWrap) {
+    const next = PSG_DATA.matches.find(m => m.status === "upcoming");
+    if (next) {
+      const homeInit = next.home.split(" ").map(w => w[0]).join("").slice(0, 3);
+      const awayInit = next.away.split(" ").map(w => w[0]).join("").slice(0, 3);
+      const isHomePsg = next.home.includes("PSG") || next.home.includes("Paris");
+      const isAwayPsg = next.away.includes("PSG") || next.away.includes("Paris");
+      predictWrap.innerHTML = `
+        <div class="predict-card">
+          <div class="predict-title">🔮 Pronostique le match</div>
+          <div class="predict-sub">${next.comp} · ${next.date}</div>
+          <div class="predict-teams">
+            <div class="predict-team">
+              <div class="team-badge ${isHomePsg ? "" : "team-other"}">${homeInit}</div>
+              <div class="predict-team-name">${next.home}</div>
+              <input type="number" class="predict-score-input" id="pred-h" min="0" max="9" value="0">
+            </div>
+            <div class="predict-vs">VS</div>
+            <div class="predict-team">
+              <div class="team-badge ${isAwayPsg ? "" : "team-other"}">${awayInit}</div>
+              <div class="predict-team-name">${next.away}</div>
+              <input type="number" class="predict-score-input" id="pred-a" min="0" max="9" value="0">
+            </div>
+          </div>
+          <button class="btn btn-primary" id="pred-submit">Valider mon pronostic</button>
+          <div class="predict-result" id="pred-result"></div>
+        </div>`;
+      document.getElementById("pred-submit").addEventListener("click", e => {
+        const h = +document.getElementById("pred-h").value;
+        const a = +document.getElementById("pred-a").value;
+        const psgHome = isHomePsg;
+        const psgScore = psgHome ? h : a;
+        const oppScore = psgHome ? a : h;
+        const result = document.getElementById("pred-result");
+        let txt, cls;
+        if (psgScore > oppScore) {
+          txt = `🔥 Tu crois en Paris ! ${psgScore}-${oppScore} pour les Rouge et Bleu. Allez Paris !`;
+          cls = "win";
+        } else if (psgScore === oppScore) {
+          txt = `⚖️ Match nul ${h}-${a} selon toi. Le Parc a toujours soif de victoire !`;
+          cls = "draw";
+        } else {
+          txt = `😱 Quoi ?! Tu pronostiques une défaite ?! Allez quoi, crois en ton équipe !`;
+          cls = "loss";
+        }
+        result.textContent = txt;
+        result.className = "predict-result show " + cls;
+        if (cls === "win") {
+          const r = e.target.getBoundingClientRect();
+          fireConfetti(r.left + r.width / 2, r.top);
+        }
+      });
+    }
+  }
+
+  // ===== SEASON CHART =====
+  const chartEl = document.getElementById("season-chart");
+  if (chartEl) {
+    const data = [
+      { j: "J1", pts: 3 }, { j: "J5", pts: 13 }, { j: "J10", pts: 26 },
+      { j: "J15", pts: 38 }, { j: "J18", pts: 46 }, { j: "J22", pts: 56 },
+      { j: "J25", pts: 63 }, { j: "J28", pts: 70 }, { j: "J30", pts: 76 }
+    ];
+    const max = 90;
+    chartEl.innerHTML = `
+      <div style="margin-bottom:1.5rem;">
+        <div style="font-weight:800;color:var(--psg-blue-dark);font-size:1.1rem;">Points accumulés en Ligue 1</div>
+        <div style="font-size:.85rem;color:var(--text-muted);">Progression saison 2025-2026</div>
+      </div>
+      <div class="chart-bars">
+        ${data.map(d => `<div class="chart-bar" data-val="${d.pts}" data-label="${d.j}" data-target="${(d.pts / max) * 100}"></div>`).join("")}
+      </div>`;
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.querySelectorAll(".chart-bar").forEach((b, i) => {
+            setTimeout(() => { b.style.height = b.dataset.target + "%"; }, i * 80);
+          });
+          obs.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.3 });
+    obs.observe(chartEl);
   }
 
   // 3D tilt on player cards
@@ -365,7 +609,7 @@ function renderMatchCard(m) {
     <div class="goal-timeline">
       <div class="goal-timeline-title">⚡ Résumé des actions de but</div>
       <div class="goals">
-        ${m.goals.map(g => `
+        ${m.goals.map((g, gi) => `
           <div class="goal">
             <span class="goal-minute">${g.min}'</span>
             <span class="goal-icon">⚽</span>
@@ -373,6 +617,7 @@ function renderMatchCard(m) {
               <span class="goal-scorer">${g.scorer}</span> (${g.team})
               ${g.assist ? `<span class="goal-assist"> — passe de ${g.assist}</span>` : ""}
               <div style="font-size:.82rem;color:#6b7280;margin-top:.15rem">${g.desc}</div>
+              <button class="replay-btn" onclick="playGoalReplay(${m.id}, ${gi})">▶ Voir l'action</button>
             </div>
           </div>`).join("")}
       </div>
@@ -394,6 +639,48 @@ function renderMatchCard(m) {
   </article>`;
 }
 
+function buildRadarChart(stats) {
+  if (!stats) return "";
+  const labels = [
+    { key: "pac", name: "Vitesse" },
+    { key: "sho", name: "Tir" },
+    { key: "pas", name: "Passe" },
+    { key: "dri", name: "Drible" },
+    { key: "def", name: "Défense" },
+    { key: "phy", name: "Physique" }
+  ];
+  const cx = 160, cy = 140, r = 90;
+  const n = labels.length;
+  const points = labels.map((lab, i) => {
+    const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
+    const val = (stats[lab.key] || 0) / 99;
+    return { x: cx + Math.cos(angle) * r * val, y: cy + Math.sin(angle) * r * val, angle, val: stats[lab.key], label: lab.name };
+  });
+  const grids = [0.25, 0.5, 0.75, 1].map(ratio => {
+    const pts = labels.map((_, i) => {
+      const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
+      return `${cx + Math.cos(angle) * r * ratio},${cy + Math.sin(angle) * r * ratio}`;
+    }).join(" ");
+    return `<polygon class="radar-grid" points="${pts}"/>`;
+  }).join("");
+  const axes = labels.map((_, i) => {
+    const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
+    return `<line class="radar-axis" x1="${cx}" y1="${cy}" x2="${cx + Math.cos(angle) * r}" y2="${cy + Math.sin(angle) * r}"/>`;
+  }).join("");
+  const shape = `<polygon class="radar-shape" points="${points.map(p => `${p.x},${p.y}`).join(" ")}"/>`;
+  const dots = points.map(p => `<circle class="radar-point" cx="${p.x}" cy="${p.y}" r="3.5"/>`).join("");
+  const labelsHtml = labels.map((lab, i) => {
+    const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
+    const lx = cx + Math.cos(angle) * (r + 18);
+    const ly = cy + Math.sin(angle) * (r + 18) + 3;
+    return `<text class="radar-label" x="${lx}" y="${ly}">${lab.name}</text>
+            <text class="radar-value" x="${lx}" y="${ly + 11}">${stats[lab.key]}</text>`;
+  }).join("");
+  return `<svg class="radar-chart" viewBox="0 0 320 280" xmlns="http://www.w3.org/2000/svg">
+    ${grids}${axes}${shape}${dots}${labelsHtml}
+  </svg>`;
+}
+
 function openPlayerModal(id) {
   const p = PSG_DATA.players.find(x => x.id === id);
   if (!p) return;
@@ -401,7 +688,13 @@ function openPlayerModal(id) {
   const posLabels = { GK: "Gardien", DEF: "Défenseur", MID: "Milieu", FWD: "Attaquant" };
   document.getElementById("modal-title").textContent = p.name;
   document.getElementById("modal-sub").textContent = `${posLabels[p.pos]} · N°${p.num} · ${p.nat}`;
+  const stats = (PSG_DATA.ratings || {})[p.id];
+  const overall = stats ? Math.round((stats.pac + stats.sho + stats.pas + stats.dri + stats.def + stats.phy) / 6) : null;
   document.getElementById("modal-body").innerHTML = `
+    ${overall ? `<div style="text-align:center;margin-bottom:.5rem;">
+      <div style="display:inline-block;padding:.35rem 1rem;background:linear-gradient(135deg,#DA291C,#d4af37);color:#fff;border-radius:999px;font-weight:900;font-size:.9rem;letter-spacing:1px;">NOTE GLOBALE · ${overall}</div>
+    </div>` : ""}
+    ${buildRadarChart(stats)}
     <div class="modal-stats">
       <div class="modal-stat"><div class="modal-stat-value">${p.apps}</div><div class="modal-stat-label">Matchs</div></div>
       <div class="modal-stat"><div class="modal-stat-value">${p.goals}</div><div class="modal-stat-label">Buts</div></div>
@@ -415,3 +708,75 @@ function openPlayerModal(id) {
   `;
   modal.classList.add("active");
 }
+
+// ===== GOAL REPLAY on mini pitch =====
+function playGoalReplay(matchId, goalIdx) {
+  const m = PSG_DATA.matches.find(x => x.id === matchId);
+  if (!m || !m.goals[goalIdx]) return;
+  const g = m.goals[goalIdx];
+  const isPsgGoal = g.team === "PSG";
+
+  // Generate a plausible ball path (4 points: start, assist pass, shot, goal)
+  const paths = [
+    [{x:20,y:50},{x:50,y:35},{x:75,y:25},{x:95,y:15}],
+    [{x:10,y:60},{x:40,y:55},{x:70,y:40},{x:95,y:18}],
+    [{x:30,y:30},{x:55,y:45},{x:75,y:30},{x:95,y:12}],
+    [{x:15,y:45},{x:45,y:25},{x:70,y:35},{x:95,y:22}]
+  ];
+  const path = paths[goalIdx % paths.length];
+  const pathD = `M ${path.map(p => `${p.x}% ${p.y}%`).join(" L ")}`;
+
+  const modal = document.getElementById("player-modal");
+  document.getElementById("modal-title").textContent = `⚽ But de ${g.scorer}`;
+  document.getElementById("modal-sub").textContent = `${g.min}ᵉ minute · ${m.comp} · ${m.home} ${m.scoreH}-${m.scoreA} ${m.away}`;
+  document.getElementById("modal-body").innerHTML = `
+    <div class="mini-pitch">
+      <svg class="mini-pitch-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <rect x="1" y="1" width="98" height="98" class="mini-pitch-line"/>
+        <line x1="50" y1="1" x2="50" y2="99" class="mini-pitch-line"/>
+        <circle cx="50" cy="50" r="12" class="mini-pitch-line"/>
+        <rect x="1" y="30" width="18" height="40" class="mini-pitch-line"/>
+        <rect x="81" y="30" width="18" height="40" class="mini-pitch-line"/>
+        <rect x="1" y="40" width="7" height="20" class="mini-pitch-line"/>
+        <rect x="92" y="40" width="7" height="20" class="mini-pitch-line"/>
+        <path d="${pathD}" class="ball-path" id="ball-trail"/>
+        <circle cx="${path[0].x}" cy="${path[0].y}" r="2.8" class="ball" id="ball-anim"/>
+      </svg>
+    </div>
+    <div style="text-align:center;margin-top:.5rem;">
+      <div style="font-weight:800;color:var(--psg-blue-dark);font-size:1rem;">${g.scorer}${g.assist ? ` · passe de ${g.assist}` : ""}</div>
+      <div style="color:var(--text-muted);font-size:.9rem;margin-top:.3rem;">${g.desc}</div>
+    </div>
+    <button class="btn btn-primary" id="replay-again" style="margin-top:1rem;width:100%;justify-content:center">🔁 Rejouer l'action</button>
+  `;
+  modal.classList.add("active");
+
+  const animateBall = () => {
+    const ball = document.getElementById("ball-anim");
+    if (!ball) return;
+    const frames = path.map(p => ({ cx: p.x, cy: p.y }));
+    const steps = 100;
+    let i = 0;
+    const interp = (a, b, t) => a + (b - a) * t;
+    const tick = () => {
+      const segCount = frames.length - 1;
+      const progress = i / steps;
+      const segF = progress * segCount;
+      const seg = Math.min(Math.floor(segF), segCount - 1);
+      const t = segF - seg;
+      ball.setAttribute("cx", interp(frames[seg].cx, frames[seg + 1].cx, t));
+      ball.setAttribute("cy", interp(frames[seg].cy, frames[seg + 1].cy, t) - Math.sin(progress * Math.PI) * 6);
+      i++;
+      if (i <= steps) requestAnimationFrame(tick);
+      else if (isPsgGoal) {
+        const r = ball.getBoundingClientRect();
+        if (typeof window.__fireConf === "function") window.__fireConf(r.left, r.top);
+      }
+    };
+    tick();
+  };
+  setTimeout(animateBall, 300);
+  const again = document.getElementById("replay-again");
+  if (again) again.addEventListener("click", animateBall);
+}
+window.playGoalReplay = playGoalReplay;

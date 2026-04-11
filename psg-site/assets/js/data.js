@@ -153,6 +153,29 @@ const PSG_DATA = {
     { year: "2025", title: "Première Ligue des Champions !", desc: "Le Paris Saint-Germain remporte enfin sa première Ligue des Champions, consécration historique." }
   ],
 
+  // Stats radar par joueur (pace, shoot, pass, drib, def, phys) sur 99
+  ratings: {
+    1:  { pac: 58, sho: 22, pas: 75, dri: 55, def: 91, phy: 88 },
+    5:  { pac: 73, sho: 55, pas: 81, dri: 72, def: 89, phy: 84 },
+    4:  { pac: 91, sho: 72, pas: 80, dri: 85, def: 80, phy: 78 },
+    6:  { pac: 92, sho: 62, pas: 78, dri: 86, def: 82, phy: 78 },
+    8:  { pac: 74, sho: 45, pas: 74, dri: 68, def: 85, phy: 83 },
+    10: { pac: 78, sho: 80, pas: 90, dri: 89, def: 75, phy: 72 },
+    11: { pac: 72, sho: 75, pas: 88, dri: 83, def: 72, phy: 80 },
+    13: { pac: 82, sho: 72, pas: 85, dri: 87, def: 78, phy: 72 },
+    16: { pac: 91, sho: 88, pas: 83, dri: 95, def: 45, phy: 74 },
+    17: { pac: 93, sho: 84, pas: 78, dri: 89, def: 42, phy: 73 },
+    18: { pac: 80, sho: 87, pas: 72, dri: 80, def: 42, phy: 82 }
+  },
+
+  quotes: [
+    { text: "Ici c'est Paris, et ça ne changera jamais.", author: "Les ultras du Parc" },
+    { text: "Le Paris Saint-Germain, c'est bien plus qu'un club, c'est une passion qui se transmet.", author: "Un supporter depuis 1974" },
+    { text: "Allez Paris, Allez Paris, Allez les Rouge et Bleu !", author: "Chant du Collectif Ultras Paris" },
+    { text: "Le Parc des Princes tremble, l'Europe aussi.", author: "L'Équipe — finale LDC 2025" },
+    { text: "Rêver plus grand, ensemble.", author: "Devise du club" }
+  ],
+
   // Formation 4-3-3 — positions en % du terrain (x de gauche à droite, y du but adverse au but PSG)
   formation: {
     label: "4 - 3 - 3",
