@@ -14,6 +14,7 @@ frontend/.vite/
 *.iml
 .DS_Store
 **/.DS_Store
+.claude/
 
 # Env
 .env
